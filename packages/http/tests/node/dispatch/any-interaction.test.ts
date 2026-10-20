@@ -2,7 +2,7 @@ import 'reflect-metadata';
 
 import { interactionMiddleware, MiddlewareRegistry } from '@seedcord/core/internal';
 import { Envapter, PortableSource } from 'envapt';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { emptyRouteMaps } from '#src/dispatch/resolve';
 import { buildEngine } from '#src/engine';
@@ -15,21 +15,9 @@ import { signedRequest, slashPayload } from './harness';
 import type { InteractionMiddlewareConstructor } from '#handlers/constructors';
 import type { SubscriptionData } from '@seedcord/core';
 
-vi.mock('@discordjs/rest', async (importOriginal) => {
-    class FakeRest {
-        public post = vi.fn().mockResolvedValue({ resource: { message: { id: 'm-1' } } });
-        public patch = vi.fn().mockResolvedValue({ id: 'm-1' });
-
-        public setToken(): this {
-            return this;
-        }
-    }
-    return { ...(await importOriginal<object>()), REST: FakeRest };
-});
-
 async function published(payload: object): Promise<SubscriptionData<'anyInteraction'>[]> {
     const signer = await createSigner();
-    Envapter.useSource(new PortableSource({ DISCORD_PUBLIC_KEY: signer.publicKeyHex, DISCORD_BOT_TOKEN: VALID_TOKEN }));
+    Envapter.useSource(new PortableSource({ DISCORD_BOT_TOKEN: VALID_TOKEN }));
 
     const core = testCore(nullPathConfig, VALID_TOKEN);
     const seen: SubscriptionData<'anyInteraction'>[] = [];
@@ -38,7 +26,8 @@ async function published(payload: object): Promise<SubscriptionData<'anyInteract
     const handle = buildEngine(
         core,
         emptyRouteMaps(),
-        new MiddlewareRegistry<InteractionMiddlewareConstructor>(interactionMiddleware)
+        new MiddlewareRegistry<InteractionMiddlewareConstructor>(interactionMiddleware),
+        signer.publicKeyHex
     );
     await handle(await signedRequest(signer, payload));
     return seen;

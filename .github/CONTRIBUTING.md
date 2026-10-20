@@ -100,6 +100,10 @@ pnpm turbo build --filter=@seedcord/<site>...
 
 A guide build uses about 6 GB of memory. With 8 GB or less, build one site at a time.
 
+### Writing a blog post
+
+Each post is a folder in `apps/home/content/blog`. The [README](../apps/home/content/blog/README.md) there has the steps for writing one.
+
 ## Trying a change in a real bot
 
 `mocks/gateway` and `mocks/http` are working bots, one per transport. Copy a mock's `.env.example` to `.env` and fill it in. The example file lists every variable that mock reads. The [guide](https://seedcord.org/guide/discord-application) shows how to create an application and get its token.
@@ -170,12 +174,14 @@ Have it load the others only for these tasks:
 - [`changeset-guidelines`](../.agents/skills/changeset-guidelines/SKILL.md) before writing a changeset
 - [`envapt`](../.agents/skills/envapt/SKILL.md) when code reads config through `envapt`
 - [`release-version`](../.agents/skills/release-version/SKILL.md) for prepping a release, a maintainer-only job
+- [`release-docs`](../.agents/skills/release-docs/SKILL.md) for bringing the changesets, READMEs, home page and guide up to date before a release, a maintainer-only job
+- [`test-performance`](../.agents/skills/test-performance/SKILL.md) when writing a test, a test helper, or a vitest config, or when a test is slow or fails only in the full suite
 
 Before you open a PR, run [`/branch-audit`](../.claude/commands/branch-audit.md) or have your agent run it. It reviews everything your branch changes against `next`. Fix what it finds before you push.
 
 ## CI
 
-[`checks.yml`](workflows/checks.yml) runs on every PR that is not a draft, and [`commitlint.yml`](workflows/commitlint.yml) checks every commit in it. CI runs the checks from `pnpm prePush:all` on every package. A PR that fails CI will not get a detailed review.
+[`checks.yml`](workflows/checks.yml) runs on every PR, drafts included, and [`commitlint.yml`](workflows/commitlint.yml) checks every commit in it. CI runs the checks from `pnpm prePush:all` on every package. A PR that fails CI will not get a detailed review.
 
 ## Questions
 

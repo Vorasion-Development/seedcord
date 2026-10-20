@@ -1,18 +1,22 @@
 import { botColorStep } from './botColor';
 import { capabilitiesStep } from './capabilities';
 import { directoryStep } from './directory';
-import { publicKeyStep } from './publicKey';
+import { runtimeStep } from './runtime';
+import { testingGuildsStep } from './testingGuilds';
 import { tokenStep } from './token';
 import { transportStep } from './transport';
+import { gitStep, installStep } from './yesNo';
 
 import type { AnyStep } from '#interview/types';
 
-// the token and public key are both read off the Discord dashboard
 export const STEPS: AnyStep[] = [
     directoryStep,
     transportStep,
+    runtimeStep,
     capabilitiesStep,
     tokenStep,
-    publicKeyStep,
-    botColorStep
+    testingGuildsStep,
+    botColorStep,
+    installStep,
+    gitStep
 ];

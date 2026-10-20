@@ -4,19 +4,15 @@ import { helpText } from '#cli/help';
 import { STEPS } from '#interview/steps';
 
 describe('helpText', () => {
-    it('lists every flag the interview asks for', () => {
-        const text = helpText();
+    it('lists every flag the interview reads, each beside what it does', () => {
+        const lines = helpText().split('\n');
+        const listed = (name: string, description: string): boolean =>
+            lines.some((line) => line.trim().startsWith(`--${name} `) && line.trimEnd().endsWith(description));
 
-        for (const step of STEPS) {
-            expect(text).toContain(`--${step.flag.name}`);
+        for (const { flag } of STEPS) {
+            expect(listed(flag.name, flag.description)).toBe(true);
+            if (flag.noFlag !== undefined) expect(listed(`no-${flag.name}`, flag.noFlag)).toBe(true);
         }
-    });
-
-    it('lists --no-token and --no-public-key', () => {
-        const text = helpText();
-
-        expect(text).toContain('--no-token');
-        expect(text).toContain('--no-public-key');
     });
 
     it('shows the shorthand beside the flag it stands for', () => {

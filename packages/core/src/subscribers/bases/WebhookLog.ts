@@ -1,6 +1,6 @@
 import { SeedcordErrorCode, paint } from '@seedcord/errors';
 import { SeedcordError, SeedcordTypeError } from '@seedcord/errors/internal';
-import { Converters, Envapter } from 'envapt';
+import { Envapter } from 'envapt';
 
 import { sendFlags } from '#reply/flags';
 import { WebhookUrlMetadataKey } from '#src/metadataKeys';
@@ -99,16 +99,20 @@ export abstract class WebhookLog<KeyOfSubscribers extends SubscriptionKey, TCore
     /** @internal */
     static envKeyOf(ctor: NewableFunction): string {
         const envKey = Reflect.getMetadata(WebhookUrlMetadataKey, ctor) as string | undefined;
-        if (!envKey) throw new SeedcordError(SeedcordErrorCode.DecoratorWebhookUrlMissing, [ctor.name]);
+        if (!envKey) throw new SeedcordTypeError(SeedcordErrorCode.DecoratorWebhookUrlMissing, [ctor.name]);
         return envKey;
     }
 
     /** @internal Returns null when the env var is unset, throws when set but malformed. */
     static urlOf(envKey: string): string | null {
-        if (!Envapter.has(envKey)) return null;
-        const raw = Envapter.getRequired(envKey, Converters.String).trim();
-        if (raw === '') return null;
-        if (!isDiscordWebhookUrl(raw)) throw new SeedcordTypeError(SeedcordErrorCode.ConfigWebhookUrlInvalid, [envKey]);
+        const raw = Envapter.get(envKey)?.trim();
+        if (!raw) return null;
+        if (!isDiscordWebhookUrl(raw)) {
+            throw new SeedcordError(SeedcordErrorCode.ConfigInvalidEnv, [
+                envKey,
+                "the webhook URL from the channel's Integrations settings"
+            ]);
+        }
         return raw;
     }
 }

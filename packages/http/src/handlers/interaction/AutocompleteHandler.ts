@@ -80,11 +80,11 @@ export abstract class AutocompleteHandler<Route extends keyof SlashRegistry> ext
      *
      * Provide one arm per autocompletable field across the registered commands, keyed by field name. Each
      * arm receives the focused partial value and a `respond` typed to that field's choice value. The
-     * arms must cover every autocompletable field, a missing field or an unknown key is a compile error. A
-     * focused field with no arm, only reachable from a stale-deployed command, throws at runtime.
+     * arms must cover every autocompletable field. A missing field or an unknown key is a compile error.
      *
      * @param arms - One handler per autocompletable field, keyed by field name.
      * @returns The result of the arm that ran.
+     * @throws A **SeedcordTypeError** with `MatchArmMissing` when the focused field has no arm. Only a stale-deployed command can send one.
      */
     protected async match<Ret>(arms: FocusedArms<Route, Ret>): Promise<Ret> {
         const { name, value } = this.focused;
@@ -95,7 +95,12 @@ export abstract class AutocompleteHandler<Route extends keyof SlashRegistry> ext
             respond: (choices: readonly APIApplicationCommandOptionChoice[]) => Promise<void>
         ) => Promisable<Ret>;
         const arm = Object.hasOwn(arms, name) ? (arms as Record<string, Arm>)[name] : undefined;
-        if (!arm) throw new SeedcordTypeError(SeedcordErrorCode.AutocompleteMatchArmMissing, [name]);
+        if (!arm)
+            throw new SeedcordTypeError(SeedcordErrorCode.MatchArmMissing, [
+                this.constructor.name,
+                'focused field',
+                name
+            ]);
         return await arm(value, respond);
     }
 

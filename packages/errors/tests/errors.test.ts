@@ -16,7 +16,6 @@ describe('Seedcord error constructors', () => {
         const error = new SeedcordError(SeedcordErrorCode.CorePluginAfterInit, { cause });
 
         expect(error.cause).toBe(cause);
-        expect(error.message).toContain('Cannot attach a plugin');
     });
 
     it('formats messages with tuple arguments', () => {
@@ -26,7 +25,7 @@ describe('Seedcord error constructors', () => {
     });
 
     it('supports SeedcordTypeError and SeedcordRangeError variants', () => {
-        const typeError = new SeedcordTypeError(SeedcordErrorCode.DecoratorInvalidMiddlewarePriority);
+        const typeError = new SeedcordTypeError(SeedcordErrorCode.DecoratorInvalidMiddlewarePriority, ['Audit', 'NaN']);
         const rangeError = new SeedcordRangeError(SeedcordErrorCode.PluginKyselyInvalidMigrationModule, ['foo.ts']);
 
         expect(typeError).toBeInstanceOf(TypeError);
@@ -35,9 +34,30 @@ describe('Seedcord error constructors', () => {
     });
 });
 
+describe('a reason that ends in a code frame', () => {
+    const FRAME = 'YAMLException: bad indent\n\n 1 | reply: [broken\n-----^';
+
+    it('starts the fix on its own line and leaves the frame as it was', () => {
+        const error = new SeedcordError(SeedcordErrorCode.CoreVitePluginThrew, [
+            'yaml',
+            { hook: 'transform', loading: { kind: 'file', path: '/bot/src/ping.yaml' } },
+            '/bot/seedcord.config.ts',
+            FRAME
+        ]);
+
+        expect(error.message).toContain(`${FRAME}\nFix`);
+    });
+
+    it('ends a one-line reason with a period before the next sentence', () => {
+        const error = new SeedcordError(SeedcordErrorCode.CorePathUnreadable, ['/bot/src', 'EACCES']);
+
+        expect(error.message).toContain('EACCES. Check that it exists');
+    });
+});
+
 describe('isSeedcordError type guard', () => {
     const baseError = new SeedcordError(SeedcordErrorCode.CoreSingletonViolation);
-    const typeError = new SeedcordTypeError(SeedcordErrorCode.DecoratorInvalidMiddlewarePriority);
+    const typeError = new SeedcordTypeError(SeedcordErrorCode.DecoratorInvalidMiddlewarePriority, ['Audit', 'NaN']);
 
     it('detects any Seedcord error without filters', () => {
         expect(isSeedcordError(baseError)).toBe(true);

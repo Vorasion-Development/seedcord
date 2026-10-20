@@ -1,6 +1,6 @@
-import { BUILT_FILES_KEY } from '@seedcord/utils/node/internal';
+import { BOT_FILES_KEY, setBuiltFiles } from '@seedcord/utils/internal';
 
-// where an edge bot's files sit
+// the root seedcord build gives every edge worker
 export const BUILT_ROOT = '/bot';
 
 function foldersOf(keys: readonly string[]): string[] {
@@ -16,17 +16,19 @@ function foldersOf(keys: readonly string[]): string[] {
 export function registerBuiltFiles(
     modules: Record<string, Record<string, unknown>>,
     emptyFolders: readonly string[] = []
-): void {
-    Reflect.set(globalThis, Symbol.for(BUILT_FILES_KEY), {
+): Disposable {
+    return setBuiltFiles({
         root: BUILT_ROOT,
+        listed: [],
+        skippedFolders: [],
         folders: [...new Set([...foldersOf(Object.keys(modules)), ...emptyFolders])],
         modules: Object.fromEntries(
             Object.entries(modules).map(([key, exported]) => [key, () => Promise.resolve(exported)])
         ),
-        text: {}
+        listedFiles: {}
     });
 }
 
 export function clearBuiltFiles(): void {
-    Reflect.deleteProperty(globalThis, Symbol.for(BUILT_FILES_KEY));
+    Reflect.deleteProperty(globalThis, Symbol.for(BOT_FILES_KEY));
 }

@@ -2,4 +2,4 @@
 '@seedcord/utils': patch
 ---
 
-Fixed `filterCirculars` so only references on the active traversal path render as `[Circular]`. When your object shares a child across fields, each field now retains that child's contents.
+Fixed `filterCirculars` printing a child that two fields share as `[Circular]`. Both fields now show that child's contents, in `decycle` and `json` mode.

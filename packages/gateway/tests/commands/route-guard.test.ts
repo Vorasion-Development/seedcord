@@ -1,4 +1,4 @@
-import { describe, expect, afterEach, vi } from 'vitest';
+import { type MockInstance, describe, expect, afterEach, vi } from 'vitest';
 
 import { commandRegistryOf, interactionsOf } from '#bot/Bot';
 import { Seedcord } from '#src/Seedcord';
@@ -6,23 +6,21 @@ import { seedcordPath } from '#tests/utils/source-path';
 import { testConfig } from '#tests/utils/test-config';
 import { it } from '#tests/utils/test-env';
 
-import '#tests/utils/mock-env';
+type Interactions = NonNullable<ReturnType<typeof interactionsOf>>;
 
-interface GuardBot {
-    commandRegistry: { init(): Promise<void>; routeLeaves(): Set<string> };
-    interactions: {
-        init(): Promise<void>;
-        warnUnhandledRoutes(commandLeaves: Iterable<string>): void;
-        logger: { warn: (message: string) => void };
-    };
+// justified: the warnings go through the dispatcher's private logger
+function loggerOf(interactions: Interactions): { warn: (message: string) => void } {
+    return (interactions as unknown as { logger: { warn: (message: string) => void } }).logger;
 }
 
-// justified: the guard reads private state on both controllers
-function guardBotOf(instance: Seedcord): GuardBot {
-    return {
-        commandRegistry: commandRegistryOf(instance.bot) as unknown as GuardBot['commandRegistry'],
-        interactions: interactionsOf(instance.bot) as unknown as GuardBot['interactions']
-    };
+async function deployWarnings(instance: Seedcord): Promise<MockInstance<(message: string) => void>> {
+    const registry = commandRegistryOf(instance.bot);
+    const interactions = interactionsOf(instance.bot);
+    if (!registry || !interactions) throw new Error('this test config declares commands and interactions');
+    await interactions.init();
+    const warnSpy = vi.spyOn(loggerOf(interactions), 'warn');
+    await registry.deploy(new AbortController().signal, { routes: interactions });
+    return warnSpy;
 }
 
 describe('Boot-time slash route exhaustiveness guard', () => {
@@ -70,12 +68,7 @@ describe('Boot-time slash route exhaustiveness guard', () => {
         });
 
         await using seedcord = new Seedcord(config);
-        const bot = guardBotOf(seedcord);
-        await bot.commandRegistry.init();
-        await bot.interactions.init();
-
-        const warnSpy = vi.spyOn(bot.interactions.logger, 'warn');
-        bot.interactions.warnUnhandledRoutes(bot.commandRegistry.routeLeaves());
+        const warnSpy = await deployWarnings(seedcord);
 
         expect(warnSpy).toHaveBeenCalledTimes(1);
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('config/get'));
@@ -118,12 +111,7 @@ describe('Boot-time slash route exhaustiveness guard', () => {
         });
 
         await using seedcord = new Seedcord(config);
-        const bot = guardBotOf(seedcord);
-        await bot.commandRegistry.init();
-        await bot.interactions.init();
-
-        const warnSpy = vi.spyOn(bot.interactions.logger, 'warn');
-        bot.interactions.warnUnhandledRoutes(bot.commandRegistry.routeLeaves());
+        const warnSpy = await deployWarnings(seedcord);
 
         expect(warnSpy).not.toHaveBeenCalled();
     });

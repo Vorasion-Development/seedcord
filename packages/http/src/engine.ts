@@ -1,10 +1,8 @@
 import { PublishDefault } from '@seedcord/core/internal';
-import { SeedcordErrorCode, paint } from '@seedcord/errors';
-import { SeedcordError } from '@seedcord/errors/internal';
+import { paint } from '@seedcord/errors';
 import { Logger } from '@seedcord/logger';
 import { asError } from '@seedcord/utils/internal';
 import { InteractionResponseType, InteractionType } from 'discord-api-types/v10';
-import { Converters, Envapter } from 'envapt';
 
 import { dispatchInteraction } from './dispatch/dispatchInteraction';
 import { resolve } from './dispatch/resolve';
@@ -44,7 +42,7 @@ function hasInteractionType(payload: unknown): payload is { type: number } {
     return typeof payload === 'object' && payload !== null && 'type' in payload && typeof payload.type === 'number';
 }
 
-/** Structural match for the Workers `ExecutionContext`. Work past the 202 runs under its `waitUntil`. */
+/** Matches the shape of the Workers `ExecutionContext`. Work that continues after the 202 response runs under its `waitUntil`. */
 export interface EngineContext {
     waitUntil(promise: Promise<unknown>): void;
 }
@@ -54,12 +52,9 @@ export type Engine = (request: Request, ctx?: EngineContext) => Promise<Response
 export function buildEngine(
     core: Core,
     maps: RouteMaps,
-    middlewares: MiddlewareRegistry<InteractionMiddlewareConstructor>
+    middlewares: MiddlewareRegistry<InteractionMiddlewareConstructor>,
+    publicKey: string
 ): Engine {
-    if (!Envapter.has('DISCORD_PUBLIC_KEY'))
-        throw new SeedcordError(SeedcordErrorCode.ConfigMissingEnv, ['DISCORD_PUBLIC_KEY']);
-    const publicKey = Envapter.getRequired('DISCORD_PUBLIC_KEY', Converters.String);
-
     const verifier = new Ed25519Verifier(publicKey);
     const replays = new ReplayGuard();
     // eager because env binds before this factory runs

@@ -1,5 +1,7 @@
 import 'reflect-metadata';
 
+import path from 'node:path';
+
 import { HmrModuleHandler } from '@seedcord/core/hmr';
 import { Plugin } from '@seedcord/core/plugin';
 import { SeedcordErrorCode, paint } from '@seedcord/errors';
@@ -55,7 +57,7 @@ export class KyselyPostgres extends Plugin<{ transport: 'any'; runtime: 'server'
      */
     public get services(): KyselyServices {
         if (!this.servicesReady) {
-            throw new SeedcordError(SeedcordErrorCode.PluginKyselyServicesNotReady);
+            throw new SeedcordError(SeedcordErrorCode.PluginServicesNotReady, [this.constructor.name]);
         }
         return this.serviceRegistry.map;
     }
@@ -70,8 +72,7 @@ export class KyselyPostgres extends Plugin<{ transport: 'any'; runtime: 'server'
 
         if (!Envapter.isDevelopment) return;
 
-        const relPaths = this.options.migrations.path;
-        super.registerCriticalFiles(Array.isArray(relPaths) ? relPaths : [relPaths]);
+        super.registerCriticalFiles([path.posix.join(this.options.migrations.dir, '**')]);
 
         this.hmrHandler = new HmrModuleHandler({
             handlersDir: this.options.dir,
@@ -149,16 +150,19 @@ export class KyselyPostgres extends Plugin<{ transport: 'any'; runtime: 'server'
             this.migrationManager = new KyselyMigrationManager({
                 db: this.connection,
                 logger: this.logger,
-                config: this.options.migrations,
-                baseDir: process.cwd()
+                config: this.options.migrations
             });
 
             const dbLabel = this.databaseName ?? 'unknown';
             this.logger.info(`Connected to Postgres database ${paint.sky.bold(dbLabel)}`);
         } catch (err) {
-            throw new SeedcordError(SeedcordErrorCode.PluginKyselyConnectionFailed, [this.databaseName ?? undefined], {
-                cause: err
-            });
+            throw new SeedcordError(
+                SeedcordErrorCode.PluginConnectionFailed,
+                ['Postgres', this.databaseName ?? undefined],
+                {
+                    cause: err
+                }
+            );
         }
     }
 
@@ -180,9 +184,7 @@ export class KyselyPostgres extends Plugin<{ transport: 'any'; runtime: 'server'
 
         this.logger.debug(paint.mute('Closing Postgres pool.'));
         await pool.end().catch((err: unknown) => {
-            const error = Error.isError(err) ? err : new Error(String(err));
-            this.logger.error(`Could not close pg pool: ${error.message}`);
-            throw new SeedcordError(SeedcordErrorCode.PluginKyselyDisconnectFailed, { cause: err });
+            throw new SeedcordError(SeedcordErrorCode.PluginDisconnectFailed, ['Postgres'], { cause: err });
         });
         this.logger.info(paint.coral.bold('Disconnected from Postgres'));
     }
@@ -231,8 +233,7 @@ export class KyselyPostgres extends Plugin<{ transport: 'any'; runtime: 'server'
         const manager = new KyselyMigrationManager({
             db: this.connection,
             logger: this.logger,
-            config: this.options.migrations,
-            baseDir: process.cwd()
+            config: this.options.migrations
         });
 
         this.migrationManager = manager;

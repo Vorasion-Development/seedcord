@@ -35,7 +35,27 @@ export { slowGateMonitor, type SlowGateMonitor } from '#gates/slowGate';
 export type { GateObserver } from '#gates/runGates';
 export { accessorStore, clearStore, guardedAccessor } from '#src/miscellaneous/guarded';
 export { isEmojiTuple } from '#src/miscellaneous/emojiConfig';
+export { currentApplication } from '#src/miscellaneous/currentApplication';
+export { readBotToken } from '#src/miscellaneous/readBotToken';
+export { resolveEmojis } from '#src/miscellaneous/resolveEmojis';
 
+export { BAKED_IDS_KEY, type BakedIds } from '#src/bakedIds';
+export { installLinks, warnLinks } from '#src/commands/CommandInjector';
+export { COMMAND_DEPLOY_TIMEOUT_MS, CommandRegistry } from '#src/commands/CommandRegistry';
+export { resolveDeployTarget } from '#src/commands/deployTarget';
+export { putCommands, type CommandBody, type CommandScopes } from '#src/commands/putCommands';
+export { readCommands, readCommandsAt } from '#src/commands/readCommands';
+export { planDeploy } from '#src/commands/planDeploy';
+export { guildSummaries, type GuildSummary } from '#src/commands/guildSummaries';
+export { commandsRoute, GLOBAL_ID, globalFirst, scopeIdsOf, skippedNote, type ScopeId } from '#src/commands/scopes';
+export {
+    commandKey,
+    commandRefOf,
+    indexById,
+    linkCommands,
+    type CommandRef,
+    type LinkedCommands
+} from '#src/commands/linkCommands';
 export { contextMenuLeaves } from '#src/commands/contextMenuLeaves';
 export type { ContextMenuLeaves } from '#src/commands/contextMenuLeaves';
 export { isCommandClass, type CommandCtor } from '#src/commands/isCommandClass';
@@ -47,8 +67,10 @@ export { PermissionNames } from '#gates/catalog/permissions';
 export type { GateFitsWith } from '#gates/matching';
 
 export { getDevChannel, setDevChannel } from '#hmr/devChannel';
-export { HmrManager } from '#hmr/HmrManager';
+export { connectDevChannel, HmrManager } from '#hmr/HmrManager';
 export { wrapHot } from '#hmr/wrapHot';
+export { fromDevLogLine, fromWireError, toWireError } from '#hmr/wire';
+export { forwardLogsToCli } from '#hmr/forwardLogsToCli';
 
 export {
     GateNotice,

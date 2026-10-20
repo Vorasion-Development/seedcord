@@ -2,17 +2,24 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { createServer, createServerModuleRunner, mergeConfig } from 'vite';
+import { createServer, createServerModuleRunner } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { devServerConfig } from '#commands/dev/runtime/devServerConfig';
+import { serverViteConfig } from '#commands/dev/runtime/devServerConfig';
+import { botEnvironment } from '#core/modules/botEnvironment';
+import { mergeViteConfig } from '#core/modules/userCodeConfig';
+import { ProjectFiles } from '#core/project/ProjectFiles';
+import { realPath } from '#core/project/realPath';
 
 import type { ViteDevServer } from 'vite';
 
 const LOADER_PACKAGE = '@seedcord/fixture-loader';
 
-const LOADER_ENTRY = `export async function loadFile(absolutePath) {
-    return import(absolutePath);
+// importFiles imports through a file url too
+const LOADER_ENTRY = `import { pathToFileURL } from 'node:url';
+
+export async function loadFile(absolutePath) {
+    return import(pathToFileURL(absolutePath).href);
 }
 `;
 
@@ -83,12 +90,20 @@ describe('dev runtime module resolution', () => {
         root = await mkdtemp(join(tmpdir(), 'seedcord-dev-'));
         await writeFixture(root);
 
+        const config = {
+            root: realPath(join(root, 'src')),
+            configFile: realPath(join(root, 'seedcord.config.ts')),
+            files: [],
+            target: { kind: 'server', start: undefined, outDir: realPath(join(root, 'dist')) }
+        } as const;
         server = await createServer(
-            mergeConfig(devServerConfig, { root: join(root, 'src'), server: { hmr: false, watch: null } })
+            mergeViteConfig(serverViteConfig(config, new ProjectFiles({ ...config, files: [] }).layout), {
+                server: { hmr: false, watch: null }
+            })
         );
 
-        const runner = createServerModuleRunner(server.environments.ssr);
-        ({ run } = await runner.import<{ run: (path: string) => Promise<string[]> }>('/entry.ts'));
+        const runner = createServerModuleRunner(botEnvironment(server.environments));
+        ({ run } = await runner.import<{ run: (path: string) => Promise<string[]> }>('/src/entry.ts'));
     }, 30_000);
 
     afterAll(async () => {

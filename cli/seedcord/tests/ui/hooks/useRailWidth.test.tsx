@@ -1,9 +1,9 @@
+import { settled } from '@seedcord/cli-prompts/testing';
 import { Box, Text } from 'ink';
 import { render } from 'ink-testing-library';
 import React, { useRef } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import { settled } from '#tests/ui/settled';
 import { useRailWidth } from '#ui/hooks/useRailWidth';
 
 import type { DevPhase } from '#ui/stores/devPhase';
@@ -13,7 +13,7 @@ import type { ReactElement } from 'react';
 // a row parent keeps the rail at its natural content width, and the readout renders outside the measured box
 function Harness({ phase, label }: { readonly phase: DevPhase; readonly label: string }): ReactElement {
     const railRef = useRef<DOMElement | null>(null);
-    const width = useRailWidth(railRef, phase, 24, 80);
+    const width = useRailWidth(railRef, phase);
     return (
         <Box flexDirection="row">
             <Box ref={railRef} width={width ?? undefined} flexShrink={0}>

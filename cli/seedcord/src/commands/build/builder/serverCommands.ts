@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join, relative, sep } from 'node:path';
+import { dirname, join } from 'node:path';
 
-import { isPlainObject } from '@seedcord/utils/internal';
+import { isPlainObject, posixRelative } from '@seedcord/utils/internal';
 
 import type { NextCommand } from './TargetBuild';
 
@@ -35,13 +35,9 @@ function shellArg(arg: string): string {
     return `'${arg.replaceAll("'", escapedQuote)}'`;
 }
 
-// node and bun take forward slashes on windows too
-function commandPath(path: string): string {
-    return relative(process.cwd(), path).split(sep).join('/');
-}
-
 export function serverCommands(configFile: string, builtEntry: string): NextCommand[] {
-    const entry = shellArg(commandPath(builtEntry));
+    // node and bun take forward slashes on windows too
+    const entry = shellArg(posixRelative(process.cwd(), builtEntry));
     const binary = shellArg(binaryName(dirname(configFile)));
     return [
         ['run', `${runtimeName()} ${entry}`],

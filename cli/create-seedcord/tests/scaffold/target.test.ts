@@ -6,6 +6,7 @@ import { SeedcordErrorCode, isSeedcordError } from '@seedcord/errors';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { claimTarget } from '#scaffold/target';
+import { thrownBy } from '#tests/thrownBy';
 
 async function scratch(): Promise<string> {
     const dir = await mkdtempDisposable(join(tmpdir(), 'create-seedcord-'));
@@ -13,28 +14,18 @@ async function scratch(): Promise<string> {
     return dir.path;
 }
 
-async function thrownBy(run: () => Promise<unknown>): Promise<unknown> {
-    try {
-        await run();
-    } catch (error) {
-        return error;
-    }
-
-    return undefined;
-}
-
 describe('claimTarget', () => {
     it('accepts a path that does not exist yet', async () => {
         const target = join(await scratch(), 'my-bot');
 
-        await expect(claimTarget(target)).resolves.toEqual({ existed: false });
+        expect(claimTarget(target)).toEqual({ existed: false });
     });
 
     it('reports an existing empty directory, which the cleanup leaves behind', async () => {
         const target = join(await scratch(), 'my-bot');
         await mkdir(target);
 
-        await expect(claimTarget(target)).resolves.toEqual({ existed: true });
+        expect(claimTarget(target)).toEqual({ existed: true });
     });
 
     it('refuses a directory with anything in it', async () => {
@@ -42,7 +33,7 @@ describe('claimTarget', () => {
         await mkdir(target);
         await writeFile(join(target, 'README.md'), 'mine');
 
-        const thrown = await thrownBy(() => claimTarget(target));
+        const thrown = thrownBy(() => claimTarget(target));
 
         expect(isSeedcordError(thrown, undefined, SeedcordErrorCode.CreateTargetNotEmpty)).toBe(true);
         expect((thrown as Error).message).toContain('my-bot');
@@ -53,7 +44,7 @@ describe('claimTarget', () => {
         await mkdir(target);
         await writeFile(join(target, '.env'), 'SECRET=1');
 
-        const thrown = await thrownBy(() => claimTarget(target));
+        const thrown = thrownBy(() => claimTarget(target));
 
         expect(isSeedcordError(thrown, undefined, SeedcordErrorCode.CreateTargetNotEmpty)).toBe(true);
     });
@@ -62,7 +53,7 @@ describe('claimTarget', () => {
         const target = join(await scratch(), 'my-bot');
         await writeFile(target, 'not a directory');
 
-        const thrown = await thrownBy(() => claimTarget(target));
+        const thrown = thrownBy(() => claimTarget(target));
 
         expect(isSeedcordError(thrown, undefined, SeedcordErrorCode.CreateTargetNotEmpty)).toBe(true);
     });

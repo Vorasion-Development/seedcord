@@ -1,12 +1,22 @@
-import { ContextMenuCommandBuilder, SlashCommandBuilder } from '@discordjs/builders';
+import { SlashCommandBuilder } from '@discordjs/builders';
 import { isSeedcordError, SeedcordErrorCode } from '@seedcord/errors';
 import { ApplicationCommandType } from 'discord-api-types/v10';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
-import { CommandInjector, Commands, ContextMenus } from '#src/commands/CommandInjector';
+import { CommandInjector, Commands, ContextMenus, warnLinks } from '#src/commands/CommandInjector';
+import {
+    deploy,
+    deployed,
+    grouped,
+    guildBucket,
+    messageMenu,
+    ping,
+    userMenu,
+    withSubcommand
+} from '#tests/commands/fixtures';
 
 import type { CommandInfo, ContextMenuInfo } from '#src/commands/CommandInjector';
-import type { APIApplicationCommand } from 'discord-api-types/v10';
+import type { ILogger } from '@seedcord/types';
 
 // justified: SlashRegistry is empty in tests, so runtime values read through a plain record
 const commands = Commands as Record<string, CommandInfo>;
@@ -16,66 +26,21 @@ const mentionOf = (route: string): string => commands[route]!.mention;
 const userMenus = ContextMenus.user as Record<string, ContextMenuInfo>;
 const messageMenus = ContextMenus.message as Record<string, ContextMenuInfo>;
 
-type DeployedEntry = [id: string, name: string, type?: ApplicationCommandType];
-
-function deployed(entries: DeployedEntry[]): Map<string, APIApplicationCommand> {
-    const built = new Map<string, APIApplicationCommand>();
-    // justified: only the id, name, and type are read downstream
-    for (const [id, name, type = ApplicationCommandType.ChatInput] of entries)
-        built.set(id, { id, name, type } as unknown as APIApplicationCommand);
-    return built;
-}
-
-function guildBucket(guildId: string, entries: DeployedEntry[]): Map<string, Map<string, APIApplicationCommand>> {
-    const guilds = new Map<string, Map<string, APIApplicationCommand>>();
-    guilds.set(guildId, deployed(entries));
-    return guilds;
-}
-
-function ping(): SlashCommandBuilder {
-    return new SlashCommandBuilder().setName('ping').setDescription('Replies with Pong!');
-}
-
-function grouped(): SlashCommandBuilder {
-    const builder = new SlashCommandBuilder().setName('mod').setDescription('moderation');
-    builder.addSubcommandGroup((group) =>
-        group
-            .setName('case')
-            .setDescription('cases')
-            .addSubcommand((sub) => sub.setName('close').setDescription('close a case'))
-    );
-    return builder;
-}
-
-function userMenu(name = 'View Profile'): ContextMenuCommandBuilder {
-    return new ContextMenuCommandBuilder().setName(name).setType(ApplicationCommandType.User);
-}
-
-function messageMenu(name = 'Report Message'): ContextMenuCommandBuilder {
-    return new ContextMenuCommandBuilder().setName(name).setType(ApplicationCommandType.Message);
-}
-
-function withSubcommand(): SlashCommandBuilder {
-    const builder = new SlashCommandBuilder().setName('ban').setDescription('ban');
-    builder.addSubcommand((sub) => sub.setName('list').setDescription('list bans'));
-    return builder;
-}
-
 describe('CommandInjector', () => {
     it('links a global command to a clickable mention', () => {
-        new CommandInjector().inject({ global: deployed([['123', 'ping']]), guilds: new Map() }, [ping()]);
+        new CommandInjector().inject(deploy(deployed([['123', 'ping']])), [ping()]);
 
         expect(mentionOf('ping')).toBe('</ping:123>');
     });
 
     it('links a grouped leaf with the group in the middle slot', () => {
-        new CommandInjector().inject({ global: deployed([['999', 'mod']]), guilds: new Map() }, [grouped()]);
+        new CommandInjector().inject(deploy(deployed([['999', 'mod']])), [grouped()]);
 
         expect(mentionOf('mod/case/close')).toBe('</mod case close:999>');
     });
 
     it('links a subcommand leaf to its parent id', () => {
-        new CommandInjector().inject({ global: deployed([['42', 'ban']]), guilds: new Map() }, [withSubcommand()]);
+        new CommandInjector().inject(deploy(deployed([['42', 'ban']])), [withSubcommand()]);
 
         expect(mentionOf('ban/list')).toBe('</ban list:42>');
     });
@@ -83,7 +48,7 @@ describe('CommandInjector', () => {
     it('resolves a single-guild command against that guild id', () => {
         const registry = [ping()];
 
-        new CommandInjector().inject({ global: new Map(), guilds: guildBucket('g1', [['555', 'ping']]) }, registry);
+        new CommandInjector().inject(guildBucket('g1', [['555', 'ping']]), registry);
 
         expect(mentionOf('ping')).toBe('</ping:555>');
     });
@@ -93,7 +58,7 @@ describe('CommandInjector', () => {
         const buckets = guildBucket('g1', [['1', 'ping']]);
         buckets.set('g2', deployed([['2', 'ping']]));
 
-        new CommandInjector().inject({ global: new Map(), guilds: buckets }, registry);
+        new CommandInjector().inject(buckets, registry);
 
         expect(mentionOf('ping')).toBe('/ping');
         expect(commands.ping?.id).toBeUndefined();
@@ -103,7 +68,7 @@ describe('CommandInjector', () => {
         const buckets = guildBucket('g1', [['1', 'mod']]);
         buckets.set('g2', deployed([['2', 'mod']]));
 
-        new CommandInjector().inject({ global: new Map(), guilds: buckets }, [grouped()]);
+        new CommandInjector().inject(buckets, [grouped()]);
 
         expect(mentionOf('mod/case/close')).toBe('/mod case close');
     });
@@ -112,7 +77,7 @@ describe('CommandInjector', () => {
         const registry = [ping(), ping()];
 
         new CommandInjector().inject(
-            { global: deployed([['100', 'ping']]), guilds: guildBucket('g1', [['200', 'ping']]) },
+            deploy(deployed([['100', 'ping']]), guildBucket('g1', [['200', 'ping']])),
             registry
         );
 
@@ -123,13 +88,12 @@ describe('CommandInjector', () => {
         const slash = new SlashCommandBuilder().setName('report').setDescription('file a report');
 
         new CommandInjector().inject(
-            {
-                global: deployed([
+            deploy(
+                deployed([
                     ['1', 'report'],
                     ['2', 'report', ApplicationCommandType.Message]
-                ]),
-                guilds: new Map()
-            },
+                ])
+            ),
             [slash]
         );
 
@@ -141,13 +105,10 @@ describe('CommandInjector', () => {
         const registry = [slash];
 
         new CommandInjector().inject(
-            {
-                global: new Map(),
-                guilds: guildBucket('g1', [
-                    ['1', 'report'],
-                    ['2', 'report', ApplicationCommandType.User]
-                ])
-            },
+            guildBucket('g1', [
+                ['1', 'report'],
+                ['2', 'report', ApplicationCommandType.User]
+            ]),
             registry
         );
 
@@ -157,12 +118,12 @@ describe('CommandInjector', () => {
     it('drops stale keys when re-injected after a rename', () => {
         const builders = [ping()];
         const injector = new CommandInjector();
-        injector.inject({ global: deployed([['1', 'ping']]), guilds: new Map() }, builders);
+        injector.inject(deploy(deployed([['1', 'ping']])), builders);
         expect(mentionOf('ping')).toBe('</ping:1>');
 
         builders.length = 0;
         builders.push(new SlashCommandBuilder().setName('pong').setDescription('Replies with Ping!'));
-        injector.inject({ global: deployed([['2', 'pong']]), guilds: new Map() }, builders);
+        injector.inject(deploy(deployed([['2', 'pong']])), builders);
 
         expect(mentionOf('pong')).toBe('</pong:2>');
         expect(() => mentionOf('ping')).toThrow();
@@ -182,14 +143,14 @@ describe('CommandInjector', () => {
     it('keeps a route named __proto__ as an ordinary entry', () => {
         const odd = new SlashCommandBuilder().setName('__proto__').setDescription('edge');
 
-        new CommandInjector().inject({ global: deployed([['7', '__proto__']]), guilds: new Map() }, [odd]);
+        new CommandInjector().inject(deploy(deployed([['7', '__proto__']])), [odd]);
 
         expect(mentionOf('__proto__')).toBe('</__proto__:7>');
         expect(Object.keys(Commands)).toContain('__proto__');
     });
 
     it('throws for a route name inherited from Object.prototype', () => {
-        new CommandInjector().inject({ global: deployed([['1', 'ping']]), guilds: new Map() }, [ping()]);
+        new CommandInjector().inject(deploy(deployed([['1', 'ping']])), [ping()]);
 
         let caught: unknown;
         try {
@@ -203,13 +164,12 @@ describe('CommandInjector', () => {
 
     it('enumerates through the guard, so a help listing reads every resolved route', () => {
         new CommandInjector().inject(
-            {
-                global: deployed([
+            deploy(
+                deployed([
                     ['1', 'ping'],
                     ['2', 'ban']
-                ]),
-                guilds: new Map()
-            },
+                ])
+            ),
             [ping(), withSubcommand()]
         );
 
@@ -217,7 +177,7 @@ describe('CommandInjector', () => {
     });
 
     it('records the id, route, and description of a top-level command', () => {
-        new CommandInjector().inject({ global: deployed([['123', 'ping']]), guilds: new Map() }, [ping()]);
+        new CommandInjector().inject(deploy(deployed([['123', 'ping']])), [ping()]);
 
         expect(commands.ping).toEqual({
             mention: '</ping:123>',
@@ -229,10 +189,9 @@ describe('CommandInjector', () => {
 
     describe('context menus', () => {
         it('records a global user menu under its name', () => {
-            new CommandInjector().inject(
-                { global: deployed([['9', 'View Profile', ApplicationCommandType.User]]), guilds: new Map() },
-                [userMenu()]
-            );
+            new CommandInjector().inject(deploy(deployed([['9', 'View Profile', ApplicationCommandType.User]])), [
+                userMenu()
+            ]);
 
             expect(userMenus['View Profile']).toEqual({
                 id: '9',
@@ -242,10 +201,9 @@ describe('CommandInjector', () => {
         });
 
         it('records a message menu in the message bucket', () => {
-            new CommandInjector().inject(
-                { global: deployed([['8', 'Report Message', ApplicationCommandType.Message]]), guilds: new Map() },
-                [messageMenu()]
-            );
+            new CommandInjector().inject(deploy(deployed([['8', 'Report Message', ApplicationCommandType.Message]])), [
+                messageMenu()
+            ]);
 
             expect(messageMenus['Report Message']?.kind).toBe(ApplicationCommandType.Message);
             expect(Object.keys(ContextMenus.user)).toHaveLength(0);
@@ -253,13 +211,12 @@ describe('CommandInjector', () => {
 
         it('keeps a user and a message menu of the same name apart', () => {
             new CommandInjector().inject(
-                {
-                    global: deployed([
+                deploy(
+                    deployed([
                         ['1', 'Inspect', ApplicationCommandType.User],
                         ['2', 'Inspect', ApplicationCommandType.Message]
-                    ]),
-                    guilds: new Map()
-                },
+                    ])
+                ),
                 [userMenu('Inspect'), messageMenu('Inspect')]
             );
 
@@ -271,10 +228,7 @@ describe('CommandInjector', () => {
             const registry = [userMenu()];
 
             new CommandInjector().inject(
-                {
-                    global: new Map(),
-                    guilds: guildBucket('g1', [['77', 'View Profile', ApplicationCommandType.User]])
-                },
+                guildBucket('g1', [['77', 'View Profile', ApplicationCommandType.User]]),
                 registry
             );
 
@@ -286,7 +240,7 @@ describe('CommandInjector', () => {
             const buckets = guildBucket('g1', [['1', 'View Profile', ApplicationCommandType.User]]);
             buckets.set('g2', deployed([['2', 'View Profile', ApplicationCommandType.User]]));
 
-            new CommandInjector().inject({ global: new Map(), guilds: buckets }, registry);
+            new CommandInjector().inject(buckets, registry);
 
             expect(userMenus['View Profile']).toEqual({ name: 'View Profile', kind: ApplicationCommandType.User });
         });
@@ -305,30 +259,38 @@ describe('CommandInjector', () => {
 
         it('drops stale menu names when re-injected after a rename', () => {
             const injector = new CommandInjector();
-            injector.inject(
-                { global: deployed([['1', 'View Profile', ApplicationCommandType.User]]), guilds: new Map() },
-                [userMenu()]
-            );
+            injector.inject(deploy(deployed([['1', 'View Profile', ApplicationCommandType.User]])), [userMenu()]);
 
-            injector.inject(
-                { global: deployed([['2', 'Inspect User', ApplicationCommandType.User]]), guilds: new Map() },
-                [userMenu('Inspect User')]
-            );
+            injector.inject(deploy(deployed([['2', 'Inspect User', ApplicationCommandType.User]])), [
+                userMenu('Inspect User')
+            ]);
 
             expect(userMenus['Inspect User']?.id).toBe('2');
             expect(() => userMenus['View Profile']).toThrow();
         });
     });
 
+    it('warns "user menu" for a deployed user menu that has no command in code', () => {
+        const warn = vi.fn();
+        // justified: warnLinks only calls warn
+        const logger = { warn } as unknown as ILogger;
+
+        warnLinks(logger, {
+            multiGuild: [],
+            notInCode: [{ name: 'probe', type: ApplicationCommandType.User }]
+        });
+
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('user menu'));
+    });
+
     it('takes each nested route description from its own subcommand', () => {
         new CommandInjector().inject(
-            {
-                global: deployed([
+            deploy(
+                deployed([
                     ['999', 'mod'],
                     ['42', 'ban']
-                ]),
-                guilds: new Map()
-            },
+                ])
+            ),
             [grouped(), withSubcommand()]
         );
 

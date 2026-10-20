@@ -1,4 +1,5 @@
 import { SeedcordErrorCode } from '@seedcord/errors';
+import { Logger } from '@seedcord/logger';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { KyselyPostgres } from '#src/KyselyPostgres';
@@ -36,22 +37,22 @@ describe('KyselyPostgres lifecycle', () => {
     function build(timeout?: number): KyselyPostgres {
         return new KyselyPostgres(mockCore, {
             connectionString: 'postgres://localhost:5432/test',
-            migrations: { path: testEnv.resolvePath('migrations') },
+            migrations: { dir: testEnv.resolvePath('migrations') },
             dir: testEnv.resolvePath('services'),
             ...(timeout !== undefined && { timeout })
         });
     }
 
-    it('translates a connect failure into PluginKyselyConnectionFailed', async () => {
+    it('translates a connect failure into PluginConnectionFailed', async () => {
         const plugin = new KyselyPostgres(mockCore, {
             connectionString: 'postgres://localhost:5432/postgres',
-            migrations: { path: testEnv.resolvePath('migrations') },
+            migrations: { dir: testEnv.resolvePath('migrations') },
             dir: testEnv.resolvePath('services')
         });
         poolConnect.mockRejectedValueOnce(new Error('ECONNREFUSED'));
 
         await expect(plugin.init()).rejects.toThrow(
-            expect.objectContaining({ code: SeedcordErrorCode.PluginKyselyConnectionFailed })
+            expect.objectContaining({ code: SeedcordErrorCode.PluginConnectionFailed })
         );
     });
 
@@ -68,13 +69,13 @@ describe('KyselyPostgres lifecycle', () => {
         // targeting the admin db returns ensure() early, so the only connect is the plugin's
         const plugin = new KyselyPostgres(mockCore, {
             connectionString: 'postgres://localhost:5432/postgres',
-            migrations: { path: testEnv.resolvePath('migrations') },
+            migrations: { dir: testEnv.resolvePath('migrations') },
             dir: testEnv.resolvePath('services')
         });
         poolConnect.mockRejectedValueOnce(new Error('ECONNREFUSED'));
 
         await expect(plugin.init()).rejects.toThrow(
-            expect.objectContaining({ code: SeedcordErrorCode.PluginKyselyConnectionFailed })
+            expect.objectContaining({ code: SeedcordErrorCode.PluginConnectionFailed })
         );
 
         expect(poolEnd).toHaveBeenCalledTimes(1);
@@ -103,7 +104,7 @@ describe('KyselyPostgres lifecycle', () => {
         // targeting the admin db returns ensure() early, so the plugin's own pool is the only one built
         const plugin = new KyselyPostgres(mockCore, {
             connectionString: 'postgres://localhost:5432/postgres',
-            migrations: { path: testEnv.resolvePath('migrations') },
+            migrations: { dir: testEnv.resolvePath('migrations') },
             dir: testEnv.resolvePath('services')
         });
 
@@ -115,7 +116,7 @@ describe('KyselyPostgres lifecycle', () => {
     it('retries after a failed init', async () => {
         const plugin = new KyselyPostgres(mockCore, {
             connectionString: 'postgres://localhost:5432/postgres',
-            migrations: { path: testEnv.resolvePath('migrations') },
+            migrations: { dir: testEnv.resolvePath('migrations') },
             dir: testEnv.resolvePath('services')
         });
         poolConnect.mockRejectedValueOnce(new Error('ECONNREFUSED'));
@@ -129,12 +130,12 @@ describe('KyselyPostgres lifecycle', () => {
     it('closes the pool when service loading fails after connecting', async () => {
         const plugin = new KyselyPostgres(mockCore, {
             connectionString: 'postgres://localhost:5432/test',
-            migrations: { path: testEnv.resolvePath('migrations') },
+            migrations: { dir: testEnv.resolvePath('migrations') },
             dir: testEnv.resolvePath('absent')
         });
 
         await expect(plugin.init()).rejects.toThrow(
-            expect.objectContaining({ code: SeedcordErrorCode.CoreDirectoryUnreadable })
+            expect.objectContaining({ code: SeedcordErrorCode.CorePathUnreadable })
         );
 
         // the bootstrapper's admin pool is the first close, the plugin's own pool is the second
@@ -144,14 +145,14 @@ describe('KyselyPostgres lifecycle', () => {
     it('keeps the init failure when the cleanup close also fails', async () => {
         const plugin = new KyselyPostgres(mockCore, {
             connectionString: 'postgres://localhost:5432/test',
-            migrations: { path: testEnv.resolvePath('migrations') },
+            migrations: { dir: testEnv.resolvePath('migrations') },
             dir: testEnv.resolvePath('absent')
         });
         // the bootstrapper's admin close comes first, the cleanup close is the one that fails
         poolEnd.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('still busy'));
 
         await expect(plugin.init()).rejects.toThrow(
-            expect.objectContaining({ code: SeedcordErrorCode.CoreDirectoryUnreadable })
+            expect.objectContaining({ code: SeedcordErrorCode.CorePathUnreadable })
         );
     });
 
@@ -159,7 +160,7 @@ describe('KyselyPostgres lifecycle', () => {
         const plugin = build();
 
         expect(() => plugin.services).toThrow(
-            expect.objectContaining({ code: SeedcordErrorCode.PluginKyselyServicesNotReady })
+            expect.objectContaining({ code: SeedcordErrorCode.PluginServicesNotReady })
         );
     });
 
@@ -211,7 +212,7 @@ describe('KyselyPostgres lifecycle', () => {
         await plugin.dispose();
 
         expect(() => plugin.services).toThrow(
-            expect.objectContaining({ code: SeedcordErrorCode.PluginKyselyServicesNotReady })
+            expect.objectContaining({ code: SeedcordErrorCode.PluginServicesNotReady })
         );
     });
 
@@ -221,13 +222,25 @@ describe('KyselyPostgres lifecycle', () => {
         await expect(plugin.dispose()).resolves.toBeUndefined();
     });
 
-    it('translates a pool close failure into PluginKyselyDisconnectFailed', async () => {
+    it('translates a pool close failure into PluginDisconnectFailed', async () => {
         const plugin = build();
         await plugin.init();
         poolEnd.mockRejectedValueOnce(new Error('still busy'));
 
         await expect(plugin.dispose()).rejects.toThrow(
-            expect.objectContaining({ code: SeedcordErrorCode.PluginKyselyDisconnectFailed })
+            expect.objectContaining({ code: SeedcordErrorCode.PluginDisconnectFailed })
         );
+    });
+
+    it('reports a pool close failure once, through the thrown error', async () => {
+        const plugin = build();
+        await plugin.init();
+        poolEnd.mockRejectedValueOnce(new Error('still busy'));
+        const logged = vi.spyOn(Logger.prototype, 'error');
+
+        await plugin.dispose().catch(() => undefined);
+
+        expect(logged).not.toHaveBeenCalled();
+        logged.mockRestore();
     });
 });

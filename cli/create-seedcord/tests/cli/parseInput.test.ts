@@ -1,46 +1,28 @@
 import { SeedcordErrorCode, isSeedcordError } from '@seedcord/errors';
 import { describe, expect, it } from 'vitest';
 
-import { parseInput, wantsHelp, wantsVersion } from '#cli/parseInput';
-
-const TOKEN = `${'a'.repeat(26)}.${'b'.repeat(6)}.${'c'.repeat(38)}`;
-
-function thrownBy(run: () => unknown): unknown {
-    try {
-        run();
-    } catch (error) {
-        return error;
-    }
-
-    return undefined;
-}
+import { parseInput, wantsHelp, wantsVerbose, wantsVersion } from '#cli/parseInput';
+import { thrownBy } from '#tests/thrownBy';
+import { BOT_TOKEN, TOKEN } from '#tests/token';
 
 describe('parseInput', () => {
     it('reads every step flag into its answer', () => {
-        const { supplied } = parseInput([
-            '--dir',
-            'my-bot',
-            '--transport',
-            'http',
-            '--token',
-            TOKEN,
-            '--public-key',
-            'a'.repeat(64),
-            '--color',
-            'Blurple'
-        ]);
+        const supplied = parseInput(['--dir', 'my-bot', '--transport', 'http', '--token', TOKEN, '--color', 'Blurple']);
 
         expect(supplied).toEqual({
             directory: 'my-bot',
             transport: 'http',
-            token: TOKEN,
-            publicKey: 'a'.repeat(64),
+            token: BOT_TOKEN,
             botColor: 'Blurple'
         });
     });
 
+    it('reads where an http bot runs from --runtime', () => {
+        expect(parseInput(['my-bot', '--transport', 'http', '--runtime', 'edge']).runtime).toBe('edge');
+    });
+
     it('takes the directory from a bare argument', () => {
-        expect(parseInput(['my-bot']).supplied.directory).toBe('my-bot');
+        expect(parseInput(['my-bot']).directory).toBe('my-bot');
     });
 
     it('rejects a directory given as both an argument and a flag', () => {
@@ -50,26 +32,29 @@ describe('parseInput', () => {
     });
 
     it('accepts the same directory twice', () => {
-        expect(parseInput(['my-bot', '--dir', 'my-bot']).supplied.directory).toBe('my-bot');
+        expect(parseInput(['my-bot', '--dir', 'my-bot']).directory).toBe('my-bot');
     });
 
-    it('installs and runs git unless told otherwise', () => {
-        const { install, git } = parseInput([]);
+    it('leaves install and git for the interview to ask', () => {
+        const supplied = parseInput([]);
 
-        expect(install).toBe(true);
-        expect(git).toBe(true);
+        expect(supplied.install).toBeUndefined();
+        expect(supplied.git).toBeUndefined();
     });
 
-    it('turns each step off through its own flag', () => {
-        expect(parseInput(['--no-install']).install).toBe(false);
-        expect(parseInput(['--no-git']).git).toBe(false);
+    it('answers install and git yes or no through their switches', () => {
+        expect(parseInput(['--install', '--no-git'])).toEqual({ install: true, git: false });
+        expect(parseInput(['--no-install', '--git'])).toEqual({ install: false, git: true });
     });
 
-    it('reads --no-token and --no-public-key as answers left for .env', () => {
-        const { supplied } = parseInput(['--no-token', '--no-public-key']);
+    it('rejects --install passed alongside --no-install', () => {
+        const thrown = thrownBy(() => parseInput(['--install', '--no-install']));
 
-        expect(supplied.token).toBeNull();
-        expect(supplied.publicKey).toBeNull();
+        expect(isSeedcordError(thrown, undefined, SeedcordErrorCode.CreateBadUsage)).toBe(true);
+    });
+
+    it('reads --no-token as a token you add to .env later', () => {
+        expect(parseInput(['--no-token']).token).toBeNull();
     });
 
     it('rejects a token passed alongside --no-token', () => {
@@ -77,13 +62,6 @@ describe('parseInput', () => {
 
         expect(isSeedcordError(thrown, undefined, SeedcordErrorCode.CreateBadUsage)).toBe(true);
         expect((thrown as Error).message).toContain('--token or --no-token');
-    });
-
-    it('rejects a public key passed alongside --no-public-key', () => {
-        const thrown = thrownBy(() => parseInput(['--public-key', 'a'.repeat(64), '--no-public-key']));
-
-        expect(isSeedcordError(thrown, undefined, SeedcordErrorCode.CreateBadUsage)).toBe(true);
-        expect((thrown as Error).message).toContain('--public-key or --no-public-key');
     });
 
     it('names an unknown flag and points at the help', () => {
@@ -122,6 +100,17 @@ describe('wantsHelp', () => {
 
     it('is false for a run that asked for none', () => {
         expect(wantsHelp(['my-bot', '--no-git'])).toBe(false);
+    });
+});
+
+describe('wantsVerbose', () => {
+    it('reads the flag alongside the answers', () => {
+        expect(wantsVerbose(['my-bot', '--transport', 'http', '--verbose'])).toBe(true);
+        expect(parseInput(['my-bot', '--verbose'])).toEqual({ directory: 'my-bot' });
+    });
+
+    it('is false for a run that asked for none', () => {
+        expect(wantsVerbose(['my-bot'])).toBe(false);
     });
 });
 

@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+// has to run before logger-bootstrap reads the environment
+import './env-bootstrap';
 import './logger-bootstrap';
 import './subscriptions';
 
@@ -36,6 +38,7 @@ export type { GatewayPluginOptions, PluginLifecycleSpec, PluginOptions } from '.
 export * from './Seedcord';
 
 export * from '@seedcord/core';
+export { HmrModuleHandler } from '@seedcord/core/hmr';
 export * from '@seedcord/errors';
 export * from '@seedcord/event-emitter';
 export * from '@seedcord/logger';

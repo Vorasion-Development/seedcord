@@ -1,3 +1,4 @@
+import type { WorkerEnv } from './workerEnv';
 import type { Plugin } from 'vite';
 
 export const BIND_ENV_ID = 'seedcord:bind-env';
@@ -5,12 +6,12 @@ const RESOLVED_BIND_ENV_ID = `\0${BIND_ENV_ID}`;
 const CLOUDFLARE_WORKERS_ID = '\0seedcord:cloudflare-workers';
 
 // envapt's workerd build throws on a read until something binds a source
-const BIND_ENV = `import { Envapter, PortableSource } from 'envapt';
-Envapter.useSource(new PortableSource(process.env));
+const bindEnv = (env: string): string => `import { Envapter, PortableSource } from 'envapt';
+Envapter.useSource(new PortableSource(${env}));
 `;
 
 // cloudflare:workers exists only inside workerd. these are its runtime exports in @cloudflare/workers-types
-const CLOUDFLARE_WORKERS = `export const env = process.env;
+const cloudflareWorkers = (env: string): string => `export const env = ${env};
 export const exports = {};
 export const cache = {};
 export const tracing = {};
@@ -26,7 +27,8 @@ export function withExports(_exports, fn) { return fn(); }
 export function withEnvAndExports(_env, _exports, fn) { return fn(); }
 `;
 
-export function edgeStandIns(): Plugin {
+// loadEnv runs cloudflare.config.ts. a config that imports neither module never calls it
+export function edgeStandIns(loadEnv: () => Promise<WorkerEnv>): Plugin {
     return {
         name: 'seedcord:edge-stand-ins',
         resolveId(id) {
@@ -34,10 +36,11 @@ export function edgeStandIns(): Plugin {
             if (id === 'cloudflare:workers') return CLOUDFLARE_WORKERS_ID;
             return undefined;
         },
-        load(id) {
-            if (id === RESOLVED_BIND_ENV_ID) return BIND_ENV;
-            if (id === CLOUDFLARE_WORKERS_ID) return CLOUDFLARE_WORKERS;
-            return undefined;
+        async load(id) {
+            if (id !== RESOLVED_BIND_ENV_ID && id !== CLOUDFLARE_WORKERS_ID) return undefined;
+            const workerEnv = await loadEnv();
+            const values = JSON.stringify(workerEnv.values());
+            return id === RESOLVED_BIND_ENV_ID ? bindEnv(values) : cloudflareWorkers(values);
         }
     };
 }

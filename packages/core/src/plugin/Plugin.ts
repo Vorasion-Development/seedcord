@@ -1,5 +1,5 @@
 import { SeedcordErrorCode } from '@seedcord/errors';
-import { SeedcordError } from '@seedcord/errors/internal';
+import { SeedcordTypeError } from '@seedcord/errors/internal';
 import { Logger } from '@seedcord/logger';
 
 import { getDevChannel } from '#hmr/devChannel';
@@ -49,7 +49,7 @@ export const FixedScope = Symbol('seedcord:plugin:fixed-scope');
  *
  * @typeParam Opts - Where this plugin may attach.
  * @typeParam TCore - The `Core` each transport binds `this.core` to.
- * @typeParam Fixed - The axes a transport's own `Plugin` base sets. Leave it out.
+ * @typeParam Fixed - The `transport` and `runtime` values a transport's own `Plugin` base sets. Leave it out.
  *
  * @example
  * ```ts
@@ -142,12 +142,13 @@ export abstract class Plugin<
     dispose?(): Promise<void>;
 
     /**
-     * Throws a `SeedcordError` that contains the plugin class name and the reason.
+     * Rejects the options this plugin got.
      *
      * @param reason - Why the options are invalid.
+     * @throws A **SeedcordTypeError** every time, with the plugin class name and `reason` in its message.
      */
     protected rejectOptions(reason: string): never {
-        throw new SeedcordError(SeedcordErrorCode.PluginOptionsRejected, [this.constructor.name, reason]);
+        throw new SeedcordTypeError(SeedcordErrorCode.PluginOptionsRejected, [this.constructor.name, reason]);
     }
 
     /** Override to reload plugin state on an HMR update. */
@@ -157,7 +158,7 @@ export abstract class Plugin<
 
     /**
      * Registers critical file patterns that should trigger a full restart when changed in Dev HMR.
-     * @param patterns - Glob patterns relative to the project root
+     * @param patterns - Glob patterns. A relative one resolves against `root` from `seedcord.config.ts`.
      */
     protected registerCriticalFiles(patterns: string[]): void {
         getDevChannel()?.send('seedcord:register-critical-files', { patterns });

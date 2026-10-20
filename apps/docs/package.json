@@ -38,7 +38,6 @@
         "prettier": "catalog:deps",
         "react": "catalog:react",
         "react-dom": "catalog:react",
-        "shiki": "catalog:deps",
         "tailwindcss": "catalog:deps",
         "takumi-js": "catalog:deps",
         "type-fest": "catalog:deps",
@@ -63,6 +62,6 @@
         "tsx": "catalog:deps",
         "typescript": "catalog:peer",
         "vitest": "catalog:test",
-        "wrangler": "catalog:deps"
+        "wrangler": "catalog:peer"
     }
 }

@@ -51,7 +51,7 @@ declare module '@seedcord/plugin-mongoose' {
 
 ## You never construct a service
 
-The constructor takes the plugin, the core, and a model. The plugin only has all three once it has connected, so it builds your services itself during startup. It imports every `.ts` and `.js` file under the `dir` you gave the [mongoose plugin](/plugins/mongoose), including subfolders. For each exported class that extends `MongooseService` and carries the decorator, it builds the model from `schema` and constructs the class. That constructor call adds the instance to the plugin's [`services`](ref:plugin-mongoose/Mongoose.services) map under its key.
+The constructor takes the plugin, the core, and a model. The plugin only has all three once it has connected, so it builds your services itself during startup. It imports every code file under the `dir` you gave the [mongoose plugin](/plugins/mongoose), including subfolders, in order of path. That covers `.ts`, `.tsx`, `.mts`, `.js`, `.jsx`, and `.mjs`, and skips type declarations, dotfiles, dot-folders, and `node_modules`. For each exported class that extends `MongooseService` and carries the decorator, it builds the model from `schema` and constructs the class. That constructor call adds the instance to the plugin's [`services`](ref:plugin-mongoose/Mongoose.services) map under its key.
 
 <Callout type="warning">
 
@@ -181,4 +181,4 @@ class History extends SlashHandler<'history'> {
 
 `findByName` resolves to an `IUser` or `null`, so the handler checks `found` before it reads `username`.
 
-If you read `services` before the plugin's `init()` has finished, it throws `PluginMongooseServicesNotReady`. Your handlers never read it that early, though, because they only start receiving interactions once `init()` has finished.
+If you read `services` before the plugin's `init()` has finished, it throws `PluginServicesNotReady`. Your handlers never read it that early, though, because they only start receiving interactions once `init()` has finished.

@@ -31,7 +31,7 @@ export class SearchCommand extends BuilderComponent<'command'> {
 
 An option's name and its required flag are arguments to method calls. Those calls run when something constructs the class. TypeScript reads the source of that chain without running it, so the name `query` only exists once the chain has run.
 
-`seedcord codegen` records those names for you. It imports every `.ts` and `.js` file under your commands folder, constructs each decorated class it finds, reads the JSON that class's builder produced, and writes what it found to `seedcord-gen.d.ts`.
+`seedcord codegen` records those names for you. It imports every TypeScript and JavaScript file under your commands folder, constructs each decorated class it finds, reads the JSON that class's builder produced, and writes what it found to `seedcord-gen.d.ts`.
 
 <Shell run="codegen" />
 
@@ -39,13 +39,9 @@ Run it after you add a command, change its options, attach a plugin, or edit you
 
 Your handler then reads its options through `this.options`. `getString('query')` comes back as `string`, because you marked that option required. A typo in the name stops the build. [Command options](/commands/options) covers what each kind returns.
 
-You rerun it whenever a command changes, and the file sits stale until you do. `seedcord dev` offers to run codegen whenever it re-registers your commands, so most of the time you answer `y` and never think about it.
-
-<Callout type="note">
+`seedcord dev` runs codegen every time the bot starts, and again when you answer `y` to its refresh prompt. If you edit commands while dev is stopped, or your project never runs dev, run it yourself.
 
 Codegen writes the file into the `root` folder set in your `seedcord.config.ts`. A scaffolded project sets `root: './src'`, which puts it at `src/seedcord-gen.d.ts`.
-
-</Callout>
 
 ## What it writes
 
@@ -79,25 +75,30 @@ To read your commands folder and your emoji block, codegen imports the module yo
 
 Even so, your bot never starts. Nothing calls `start()`, so no plugin connects, no task runs, and nothing you've written reaches Discord.
 
-A command constructor that throws fails the whole run, since codegen has to construct the class to read its options. `CliCodegenCommandConstructorThrew` shows the class, the file, and what your constructor threw. Keep anything that can fail out of a command constructor.
+A command constructor that throws fails the whole run, since codegen has to construct the class to read its options. `CliCommandConstructorThrew` shows the class, the file, and what your constructor threw. Keep anything that can fail out of a command constructor.
 
 ## Catching a stale file in CI
 
-Some drift breaks the build for you. If you add a command without rerunning codegen, the handler naming its route fails to compile. Your editor flags it immediately.
+Some drift breaks the build for you. If you add a command without rerunning codegen, the handler with that route fails to compile. Your editor flags it immediately.
 
 Other drift compiles perfectly. If you delete a command, its entry stays in `SlashRegistry`, still typing a route your bot stopped answering. Passing `--check` renders the file in memory and compares it to the copy on disk, which catches the kind that still compiles.
 
 <Shell exec="seedcord codegen --check" />
 
-When the two match, the command prints nothing and exits `0`. A difference prints the path it compared and exits `1`.
+It prints a line per step, like plain codegen. If the file matches, the last line reads `src/seedcord-gen.d.ts is up to date` and the command exits `0`. If it differs, `--check` throws `CliCodegenOutOfDate` and exits `1`.
 
 ```txt output
-Augmentations are out of date. Run `seedcord codegen` and commit /home/you/my-bot/src/seedcord-gen.d.ts.
+  ✔︎ read config     373ms
+  ✔︎ load bot        152ms
+  ✔︎ scan commands     6ms  2 commands
+  ✘ compare types     5ms
+
+  [3119] src/seedcord-gen.d.ts is out of date. Run seedcord codegen and commit it.
 ```
 
-`--check` only reports, so you fix the drift by running plain `seedcord codegen`. The scaffold does not wire a script for it, so put it wherever your pipeline runs its checks.
+`--check` only reports, so you fix the drift by running plain `seedcord codegen`. The scaffold doesn't wire a script for it, so put it wherever your pipeline runs its checks.
 
-If codegen can't read your commands folder, it throws `CliCodegenCommandsDirUnreadable`, because a run that found no commands would pass `--check` against a file that's already stale.
+If codegen can't read your commands folder, it throws `CorePathUnreadable`, because a run that found no commands would pass `--check` against a file that's already stale.
 
 ## Commands codegen passes over
 
@@ -107,4 +108,4 @@ Your commands folder can hold helpers and constants too. Codegen imports each of
 
 ## Two commands, one name
 
-Discord scopes command names per kind. seedcord enforces the same rule. Two commands resolving to one slash route throw `CliCodegenDuplicateRoute`. Two context menus of one kind sharing a name throw `CliCodegenDuplicateContextMenu`. Both errors print the two file paths, so you know which one to rename.
+Discord scopes command names per kind. seedcord enforces the same rule. If two commands resolve to one slash route, or two context menus of one kind share a name, codegen throws `CoreDuplicateName` with both file paths, so you know which one to rename.

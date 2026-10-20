@@ -1,31 +1,39 @@
 import { Command } from '@commander-js/extra-typings';
+import { isSeedcordError } from '@seedcord/errors';
 import { installNodeDefaults } from '@seedcord/logger/node';
-import { Envapter, Environment } from 'envapt';
 
 import { BuildCommand } from '#commands/build/BuildCommand';
 import { CodegenCommand } from '#commands/codegen/CodegenCommand';
 import { CommandsCommand } from '#commands/commands/CommandsCommand';
 import { DevCommand } from '#commands/dev/DevCommand';
 import { cliLogger } from '#core/cliLogger';
-import { addVerboseOption } from '#core/verbose';
+import { renderError } from '#core/output/renderError';
+import { widthOf } from '#core/output/terminal';
+import { assertProjectInstall } from '#core/project/assertProjectInstall';
+import { addVerboseOption, isVerbose } from '#core/verbose';
 
 import { version } from '.';
 
 async function main(): Promise<void> {
-    if (!process.env.ENV && !process.env.ENVIRONMENT && !process.env.NODE_ENV) {
-        Envapter.environment = Environment.Development;
-    }
-
     installNodeDefaults();
 
     const program = addVerboseOption(new Command().name('seedcord').description('seedcord CLI').version(version));
+    program.hook('preAction', () => {
+        assertProjectInstall(process.cwd(), import.meta.dirname);
+    });
 
     new DevCommand().register(program);
     new BuildCommand().register(program);
     new CodegenCommand().register(program);
     new CommandsCommand().register(program);
 
-    await program.parseAsync(process.argv);
+    try {
+        await program.parseAsync(process.argv);
+    } catch (error: unknown) {
+        if (!isSeedcordError(error)) throw error;
+        process.stderr.write(renderError(error, { verbose: isVerbose(program), width: widthOf(process.stderr) }));
+        process.exitCode = 1;
+    }
 }
 
 void main().catch((error) => {

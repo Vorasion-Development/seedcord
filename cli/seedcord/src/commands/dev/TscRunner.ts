@@ -1,8 +1,11 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import { createInterface } from 'node:readline';
 
 import { Logger } from '@seedcord/logger';
 
 import { resolveProjectTsc } from '#core/modules/resolveProjectTsc';
+
+import type { Readable } from 'node:stream';
 
 const TSC_GRACEFUL_EXIT_MS = 2000;
 
@@ -38,23 +41,8 @@ export class TscRunner {
             stdio: ['ignore', 'pipe', 'pipe']
         });
 
-        this.process.stdout?.on('data', (data: Buffer) => {
-            const lines = data.toString().split('\n');
-            for (const line of lines) {
-                if (line.trim()) {
-                    this.logger.debug(line.trimEnd());
-                }
-            }
-        });
-
-        this.process.stderr?.on('data', (data: Buffer) => {
-            const lines = data.toString().split('\n');
-            for (const line of lines) {
-                if (line.trim()) {
-                    this.logger.error(line.trimEnd());
-                }
-            }
-        });
+        this.logLines(this.process.stdout, (line) => this.logger.debug(line));
+        this.logLines(this.process.stderr, (line) => this.logger.error(line));
 
         this.process.on('error', (err) => {
             this.logger.error(`Failed to start tsc: ${err.message}`);
@@ -66,23 +54,36 @@ export class TscRunner {
             } else {
                 this.logger.debug('tsc exited.');
             }
+        });
+
+        // a failed spawn emits close without exit
+        this.process.on('close', () => {
             this.process = null;
         });
     }
 
-    public stop(): void {
+    private logLines(stream: Readable | null, log: (line: string) => void): void {
+        if (!stream) return;
+        createInterface({ input: stream }).on('line', (line) => {
+            if (line.trim()) log(line.trimEnd());
+        });
+    }
+
+    // windows can't delete tsc's cwd until tsc exits
+    public async stop(): Promise<void> {
         const child = this.process;
         if (!child) return;
 
         this.logger.debug('Stopping tsc...');
+        // events.once rejects when the child emits error
+        const closed = new Promise<void>((resolve) => child.once('close', () => resolve()));
         child.kill('SIGTERM');
 
         // justified: tsc --watch can ignore SIGTERM when stdin is detached (Windows/some Node builds), so escalate to SIGKILL after a grace window. unref so the timer never holds the event loop open.
         const killTimer = setTimeout(() => child.kill('SIGKILL'), TSC_GRACEFUL_EXIT_MS);
         killTimer.unref();
-        child.once('exit', () => {
-            clearTimeout(killTimer);
-        });
-        // start()'s 'exit' listener is what nulls the handle, so it stays set until then and blocks a second tsc spawning over the dying one
+        await closed;
+        clearTimeout(killTimer);
+        // start() refuses a second tsc until its close listener clears the handle
     }
 }

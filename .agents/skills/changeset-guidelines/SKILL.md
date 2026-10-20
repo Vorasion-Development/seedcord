@@ -12,7 +12,7 @@ This skill decides what a changeset says. `writing-voice` covers how any sentenc
 The shape is fixed, and `pnpm lint:changesets` rejects anything else:
 
 - One paragraph on one line. No second paragraph, list, heading, quote, or code block.
-- Two sentences for a patch, three at most otherwise. Write the reader's own case in the second one.
+- At most two sentences for a patch and three otherwise. One sentence is fine when it already carries the reader's own case. A second sentence carries that case when the first one cannot.
 - `**BREAKING:**` plus a space opens the summary when the change breaks. The changeset bumps no package as a patch, and a `major` bump is only for a package already past 1.0.
 
 ---
@@ -29,7 +29,7 @@ A durable store keyed on the old behavior changes silently. In the worked exampl
 
 A bug fix opens with `Fixed`. A second fix gets its own changeset.
 
-Why: a changelog gets scanned, so the first word has to say what kind of entry this is. `pnpm lint:changesets` holds a patch changeset to one sentence, and each changeset becomes one changelog entry.
+Why: a changelog gets scanned, so the first word has to say what kind of entry this is. Each changeset becomes one changelog entry, and two fixes in one entry make the reader untangle them.
 
 ---
 
@@ -160,6 +160,17 @@ Accepted:
 ```md
 **BREAKING:** Fixed the cooldown on a handler registered on two buttons. Because its route id joined both into `button:confirm,cancel`, clicking either one put both on cooldown. Now it would just be `button:confirm`, for example.
 ```
+
+---
+
+## Deduping before a release
+
+The changelog credits each changeset to the PR whose commit added its file. `@changesets/git` finds that commit with `git log --diff-filter=AC --follow`, and `scripts/src/release/ChangelogRenderer.ts:20` reads the `(#N)` at the end of its subject.
+
+- Rewrite the text in place, in the file from the PR you want credited, then delete the duplicates.
+- A renamed file keeps its credit while its text stays close to the original. `--follow` matches a rename by content, so rename and rewrite in separate commits.
+- Never write a new file to hold merged text. It would credit the dedupe PR.
+- When one line covers two PRs, only the surviving file's PR gets linked. Write the other one into the text as a bare `#N`.
 
 ---
 

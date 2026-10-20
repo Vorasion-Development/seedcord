@@ -1,3 +1,4 @@
+import { fromWireError, toWireError } from '@seedcord/core/internal';
 import { SeedcordErrorCode } from '@seedcord/errors';
 import { SeedcordAggregateError, SeedcordError } from '@seedcord/errors/internal';
 import { render } from 'ink-testing-library';
@@ -19,9 +20,9 @@ describe('ErrorDisplay', () => {
 
     it('lists every problem in an aggregate under its message', () => {
         const error = new SeedcordAggregateError(
-            SeedcordErrorCode.CliConfigProblems,
+            SeedcordErrorCode.CliProblems,
             [
-                new SeedcordError(SeedcordErrorCode.CliConfigMissingInstance),
+                new SeedcordError(SeedcordErrorCode.CliConfigInvalidField, ['instance', 'a string']),
                 new SeedcordError(SeedcordErrorCode.CliConfigInvalidField, ['tunnel', 'a boolean or an https URL'])
             ],
             [2]
@@ -29,18 +30,45 @@ describe('ErrorDisplay', () => {
 
         const frame = render(<ErrorDisplay error={error} />).lastFrame() ?? '';
 
-        expect(frame).toContain('`instance`');
-        expect(frame).toContain('`tunnel`');
+        expect(frame).toContain('instance in the seedcord config');
+        expect(frame).toContain('tunnel in the seedcord config');
+    });
+
+    it('lists the problems of an aggregate the error wraps as its cause', () => {
+        const startup = new SeedcordAggregateError(
+            SeedcordErrorCode.LifecyclePhaseFailures,
+            [new SeedcordError(SeedcordErrorCode.PortInUse, [8787, 'port'])],
+            ['Ready', 1]
+        );
+        const error = new SeedcordError(SeedcordErrorCode.CliStartFailed, ['src/bot.ts', startup.message], {
+            cause: startup
+        });
+
+        const frame = render(<ErrorDisplay error={error} />).lastFrame() ?? '';
+
+        expect(frame).toContain('Another process already listens on port 8787');
+    });
+
+    it('lists the problems of an aggregate an edge bot sent over the wire', () => {
+        const startup = fromWireError(toWireError(new AggregateError([new Error('port taken')], 'Phase Ready failed')));
+        const error = new SeedcordError(SeedcordErrorCode.CliStartFailed, ['src/bot.ts', startup.message], {
+            cause: startup
+        });
+
+        const frame = render(<ErrorDisplay error={error} />).lastFrame() ?? '';
+
+        expect(frame).toContain('port taken');
     });
 
     it('lists two problems with the same message twice without a react key warning', () => {
         const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-        const problem = (): SeedcordError => new SeedcordError(SeedcordErrorCode.CliConfigMissingEntry);
-        const error = new SeedcordAggregateError(SeedcordErrorCode.CliConfigProblems, [problem(), problem()], [2]);
+        const problem = (): SeedcordError =>
+            new SeedcordError(SeedcordErrorCode.CliConfigInvalidField, ['entry', 'a string']);
+        const error = new SeedcordAggregateError(SeedcordErrorCode.CliProblems, [problem(), problem()], [2]);
 
         const frame = render(<ErrorDisplay error={error} />).lastFrame() ?? '';
 
-        expect(frame.split('`entry`')).toHaveLength(3);
+        expect(frame.split('entry in the seedcord config')).toHaveLength(3);
         expect(consoleError).not.toHaveBeenCalled();
         consoleError.mockRestore();
     });

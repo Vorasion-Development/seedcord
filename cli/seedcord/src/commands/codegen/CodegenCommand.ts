@@ -20,9 +20,12 @@ export class CodegenCommand extends BaseCommand {
             .action((options, command) =>
                 this.runSteps(command, CODEGEN_STEPS, async (printer) => {
                     const check = options.check ?? false;
-                    const { outputPath } = await CodegenRunner.create(printer, cliLogger('Codegen')).run(check);
+                    const runner = CodegenRunner.create(printer, cliLogger('Codegen'));
+                    const { outputPath, changed } = await runner.run(check);
                     printer.line();
-                    printer.line(check ? `${paint.path(outputPath)} is up to date` : `wrote ${paint.path(outputPath)}`);
+                    printer.line(
+                        changed ? `wrote ${paint.path(outputPath)}` : `${paint.path(outputPath)} is up to date`
+                    );
                     printer.line();
                 })
             );

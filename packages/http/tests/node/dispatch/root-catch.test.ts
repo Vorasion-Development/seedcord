@@ -16,18 +16,6 @@ import { signedRequest, slashPayload } from './harness';
 import type { InteractionMiddlewareConstructor } from '#handlers/constructors';
 import type { SubscriptionData } from '@seedcord/core';
 
-vi.mock('@discordjs/rest', async (importOriginal) => {
-    class FakeRest {
-        public post = vi.fn().mockResolvedValue({ resource: { message: { id: 'm-1' } } });
-        public patch = vi.fn().mockResolvedValue({ id: 'm-1' });
-
-        public setToken(): this {
-            return this;
-        }
-    }
-    return { ...(await importOriginal<object>()), REST: FakeRest };
-});
-
 afterEach(() => {
     Envapter.useSource(new PortableSource({}));
 });
@@ -38,7 +26,7 @@ async function routerThrows(thrown: unknown): Promise<{
     seen: SubscriptionData<'unhandledInteractionError'>[];
 }> {
     const signer = await createSigner();
-    Envapter.useSource(new PortableSource({ DISCORD_PUBLIC_KEY: signer.publicKeyHex, DISCORD_BOT_TOKEN: VALID_TOKEN }));
+    Envapter.useSource(new PortableSource({ DISCORD_BOT_TOKEN: VALID_TOKEN }));
 
     const core = testCore(nullPathConfig, VALID_TOKEN);
     const seen: SubscriptionData<'unhandledInteractionError'>[] = [];
@@ -51,7 +39,8 @@ async function routerThrows(thrown: unknown): Promise<{
     const handle = buildEngine(
         core,
         maps,
-        new MiddlewareRegistry<InteractionMiddlewareConstructor>(interactionMiddleware)
+        new MiddlewareRegistry<InteractionMiddlewareConstructor>(interactionMiddleware),
+        signer.publicKeyHex
     );
 
     return { response: await handle(await signedRequest(signer, slashPayload('anything'))), seen };

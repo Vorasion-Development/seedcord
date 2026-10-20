@@ -30,8 +30,10 @@ export interface PaginatorControls {
      */
     button(key: ControlKey, cosmetics?: ControlCosmetics): ButtonBuilder;
     /**
-     * Assemble an action row of the chosen controls, in order. Throws on an empty set, more than five
-     * controls, or a duplicate.
+     * Assemble an action row of the chosen controls, in order.
+     *
+     * @throws A **SeedcordRangeError** when `keys` is empty or holds more than five controls.
+     * @throws A **SeedcordTypeError** when `keys` holds the same control twice.
      */
     row(...keys: ControlKey[]): ActionRowBuilder<ButtonBuilder>;
 }
@@ -100,11 +102,8 @@ export class Controls implements PaginatorControls {
     }
 
     row(...keys: ControlKey[]): ActionRowBuilder<ButtonBuilder> {
-        if (keys.length === 0) {
-            throw new SeedcordRangeError(SeedcordErrorCode.PaginationEmptyControls);
-        }
-        if (keys.length > MAX_BUTTONS_PER_ROW) {
-            throw new SeedcordRangeError(SeedcordErrorCode.PaginationTooManyControls, [keys.length]);
+        if (keys.length === 0 || keys.length > MAX_BUTTONS_PER_ROW) {
+            throw new SeedcordRangeError(SeedcordErrorCode.PaginationControlCount, [keys.length, MAX_BUTTONS_PER_ROW]);
         }
         // repeating a control reuses its slot and page, so the custom_ids collide and Discord rejects the message.
         const seen = new Set<ControlKey>();

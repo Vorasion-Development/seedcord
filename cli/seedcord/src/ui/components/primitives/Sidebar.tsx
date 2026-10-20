@@ -10,35 +10,39 @@ import { LogStore } from '#ui/stores/LogStore';
 
 import { BlinkDot } from './BlinkDot';
 import { FilterChips } from './FilterChips';
-import { FilterKeys, SessionKeys } from './Hotkeys';
+import { FilterKeys, FiltersKey, SessionKeys, ViewKeys } from './Hotkeys';
 import { Rule } from './Rule';
 
 import type { TunnelStatus } from '#commands/dev/tunnel/TunnelCoordinator';
+import type { LogFilters } from '#ui/devPrefs';
 import type { FilterCursor } from '#ui/filterCursor';
+import type { DetailMode } from '#ui/LogLayout';
+import type { FilterView } from '#ui/Screen';
 import type { DevState, DevTransport } from '#ui/stores/DevStore';
-import type { LogLevel } from '@seedcord/types';
 import type { DOMElement } from 'ink';
 import type { ReactElement, Ref } from 'react';
 
-export const MAX_RAIL = 40;
+const MAX_RAIL = 40;
 
 // the widest label is 'gateway' at 7
 const META_LABEL_WIDTH = 8;
 
 const LOG_DIR = 'logs/'; // the dev default writes one combined file into this folder
 
-interface SidebarProps {
+export interface SidebarProps {
     readonly state: DevState;
-    readonly enabled: ReadonlySet<string>;
-    readonly enabledLevels: ReadonlySet<LogLevel>;
+    readonly filters: LogFilters;
     readonly uptimeMs: number | null;
     readonly following: boolean;
     readonly interactive: boolean;
     readonly cursor: FilterCursor;
     readonly width: number | null;
-    readonly filtersOpen: boolean;
+    readonly view: FilterView;
+    readonly details: DetailMode;
     readonly ref?: Ref<DOMElement>;
 }
+
+type RailKeysProps = Pick<SidebarProps, 'view' | 'state' | 'interactive' | 'following' | 'details'>;
 
 function Meta({ label, value }: { label: string; value: string }): ReactElement {
     return (
@@ -57,19 +61,59 @@ function transportLabel({ name }: DevTransport): string {
     return name.replace('@seedcord/', '');
 }
 
-function StatusBlock({ state, uptimeMs }: { state: DevState; uptimeMs: number | null }): ReactElement {
+interface StatusFact {
+    readonly label: string;
+    readonly value: string;
+}
+
+export function statusFacts(state: DevState, uptimeMs: number | null, withTarget: boolean): StatusFact[] {
+    const { transport, port, tunnel } = state;
+    const facts: (StatusFact | null)[] = [
+        transport === null
+            ? null
+            : {
+                  label: transportLabel(transport),
+                  value: withTarget ? `v${transport.version} · ${transport.target}` : `v${transport.version}`
+              },
+        uptimeMs === null ? null : { label: 'up', value: formatUptime(uptimeMs) },
+        port === null ? null : { label: 'port', value: String(port) }, // only the http host reports one
+        tunnel === null ? null : { label: 'tunnel', value: tunnelValue(tunnel) },
+        { label: 'logs', value: LOG_DIR }
+    ];
+    return facts.filter((fact) => fact !== null);
+}
+
+interface StatusBlockProps {
+    readonly state: DevState;
+    readonly uptimeMs: number | null;
+    readonly withTarget: boolean;
+}
+
+export function StatusBlock({ state, uptimeMs, withTarget }: StatusBlockProps): ReactElement {
     return (
         <Box flexDirection="column">
             <StatusBadge phase={state.phase} animate={state.idleAnimation} />
-            {state.status ? <Text>{state.status}</Text> : null}
-            {state.transport === null ? null : (
-                <Meta label={transportLabel(state.transport)} value={`v${state.transport.version}`} />
+            {state.status ? <Text wrap="truncate">{state.status}</Text> : null}
+            {statusFacts(state, uptimeMs, withTarget).map((fact) => (
+                <Meta key={fact.label} label={fact.label} value={fact.value} />
+            ))}
+        </Box>
+    );
+}
+
+function RailKeys({ view, state, interactive, following, details }: RailKeysProps): ReactElement {
+    return (
+        <Box flexShrink={0} marginTop={1} flexDirection="column">
+            {view === 'collapsed' ? <FiltersKey shown={false} /> : <FilterKeys />}
+            {view === 'always' ? <Rule /> : null}
+            {view === 'shown' ? (
+                <FiltersKey shown />
+            ) : (
+                <>
+                    <SessionKeys state={state} interactive={interactive} following={following} />
+                    <ViewKeys details={details} />
+                </>
             )}
-            {uptimeMs === null ? null : <Meta label="up" value={formatUptime(uptimeMs)} />}
-            {/* only the http host reports a port */}
-            {state.port === null ? null : <Meta label="port" value={String(state.port)} />}
-            {state.tunnel === null ? null : <Meta label="tunnel" value={tunnelValue(state.tunnel)} />}
-            <Meta label="logs" value={LOG_DIR} />
         </Box>
     );
 }
@@ -77,14 +121,14 @@ function StatusBlock({ state, uptimeMs }: { state: DevState; uptimeMs: number | 
 // flexShrink={0} on every section holds its natural height, a short terminal overlaps rows without it
 export function Sidebar({
     state,
-    enabled,
-    enabledLevels,
+    filters,
     uptimeMs,
     following,
     interactive,
     cursor,
     width,
-    filtersOpen,
+    view,
+    details,
     ref
 }: SidebarProps): ReactElement {
     return (
@@ -100,28 +144,29 @@ export function Sidebar({
             <Box flexShrink={0}>
                 <Banner version={version} />
             </Box>
-            <Box flexShrink={0} marginTop={1}>
-                <StatusBlock state={state} uptimeMs={uptimeMs} />
-            </Box>
+            {/* compact has no room for the status beside the open chips */}
+            {view === 'shown' ? null : (
+                <Box flexShrink={0} marginTop={1}>
+                    <StatusBlock state={state} uptimeMs={uptimeMs} withTarget />
+                </Box>
+            )}
             <Box flexShrink={0} marginTop={1} flexDirection="column">
                 <FilterChips
                     channels={LogStore.instance.getChannels()}
-                    enabledChannels={enabled}
-                    enabledLevels={enabledLevels}
+                    filters={filters}
                     cursor={cursor}
-                    open={filtersOpen}
+                    open={view !== 'collapsed'}
                 />
             </Box>
-            {filtersOpen ? (
-                <Box flexShrink={0} marginTop={1} flexDirection="column">
-                    <FilterKeys />
-                    <Rule />
-                </Box>
-            ) : null}
-            {/* the rule already separates the two key groups, so the blank row is only for the collapsed form */}
-            <Box flexShrink={0} marginTop={filtersOpen ? 0 : 1}>
-                <SessionKeys phase={state.phase} interactive={interactive} following={following} />
-            </Box>
+            <RailKeys view={view} state={state} interactive={interactive} following={following} details={details} />
+            <LiveFooter state={state} />
+        </Box>
+    );
+}
+
+export function LiveFooter({ state }: { readonly state: DevState }): ReactElement {
+    return (
+        <>
             <Box flexGrow={1} />
             <Box flexShrink={0} justifyContent="flex-end">
                 {isStreaming(state.phase) ? (
@@ -133,6 +178,6 @@ export function Sidebar({
                     <Text dimColor>○ idle</Text>
                 )}
             </Box>
-        </Box>
+        </>
     );
 }

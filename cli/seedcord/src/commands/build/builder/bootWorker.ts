@@ -3,13 +3,16 @@ import { stripVTControlCharacters } from 'node:util';
 import { paint, SeedcordErrorCode } from '@seedcord/errors';
 import { SeedcordError } from '@seedcord/errors/internal';
 import { asError } from '@seedcord/utils/internal';
-import { createLogger, preview } from 'vite';
+import { createLogger } from 'vite';
 
+import { openVitePreview } from '#core/modules/openViteServer';
+
+import { probeWorker } from './probeWorker';
+
+import type { ProbeFailure } from './probeWorker';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { InlineConfig, Logger, Plugin, PreviewServer } from 'vite';
 
-// the edge Seedcord answers a GET with 405 before it starts the bot
-const LOADED_STATUS = 405;
 const INTERNAL_SERVER_ERROR = 500;
 
 // the cloudflare plugin passes workerd's startup error to this logger
@@ -51,31 +54,36 @@ function localUrl(server: PreviewServer): string {
     return url;
 }
 
-// workerd loads the worker on its first request
+function failedProbe({ reason, cause }: ProbeFailure, errors: string[]): SeedcordError {
+    if (cause === undefined) return bootFailed(errors, reason);
+    return bootFailed(errors, `${reason} Run ${paint.bold('seedcord dev')} to see workerd's output.`, cause);
+}
+
 export async function bootWorker(config: InlineConfig): Promise<void> {
     const errors: string[] = [];
-    const server = await preview({
+    const onFailure = new AsyncDisposableStack();
+    // on windows, preview() rejects with workerd's startup error
+    const server = await openVitePreview(onFailure, {
         ...config,
         configFile: false,
         customLogger: errorCollector(errors),
         plugins: [...(config.plugins ?? []), answerErrorsQuietly()],
         preview: { port: 0 }
+    }).catch(async (error: unknown) => {
+        // the throw below reports the startup error that close can rethrow
+        await onFailure.disposeAsync().catch(() => undefined);
+        throw bootFailed(errors, asError(error).message, error);
     });
 
-    let status: number | undefined;
+    let loaded = false;
+    let failure: ProbeFailure | undefined;
     try {
-        const response = await fetch(localUrl(server)).catch((error: unknown) => {
-            throw bootFailed(
-                errors,
-                `The worker closed the connection before it answered (${asError(error).message}). Run ${paint.bold('wrangler dev')} in the project folder to see workerd's output.`,
-                error
-            );
-        });
-        status = response.status;
+        failure = await probeWorker(localUrl(server));
+        loaded = failure === undefined;
     } finally {
         // close rethrows a failed startup
         await server.close().catch((error: unknown) => {
-            if (status === LOADED_STATUS) {
+            if (loaded) {
                 throw bootFailed(
                     [],
                     `The worker loaded, then vite preview failed to close (${asError(error).message}).`,
@@ -84,10 +92,5 @@ export async function bootWorker(config: InlineConfig): Promise<void> {
             }
         });
     }
-    if (status === LOADED_STATUS) return;
-
-    throw bootFailed(
-        errors,
-        `The worker answered a GET with ${status}, where a seedcord bot answers 405. Check that ${paint.bold('instance')} default-exports a ${paint.bold('new Seedcord(...)')} from ${paint.bold('@seedcord/http')}.`
-    );
+    if (failure !== undefined) throw failedProbe(failure, errors);
 }

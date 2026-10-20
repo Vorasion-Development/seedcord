@@ -1,14 +1,12 @@
-import { resolve } from 'node:path';
-
 {{#if isGateway}}
 import { Seedcord } from '@seedcord/gateway';
 import { GatewayIntentBits{{#if partials}}, Partials{{/if}} } from 'discord.js';
 {{else}}
 import { Seedcord } from '@seedcord/http';
 {{/if}}
-import { Envapter } from 'envapt';
+import { Converters, Envapter } from 'envapt';
 
-Envapter.baseDir = resolve(import.meta.dirname, '..');
+import { Uptime } from '#plugins/Uptime'
 
 export const seedcord = new Seedcord({
     bot: {
@@ -23,13 +21,14 @@ export const seedcord = new Seedcord({
         },
 {{/if}}
         interactions: {
-            path: resolve(import.meta.dirname, './handlers')
+            path: './handlers'
         },
         commands: {
-            path: resolve(import.meta.dirname, './commands')
+            path: './commands',
+            guilds: Envapter.getAs('TESTING_GUILD_IDS', Converters.array(), [])
         }{{#if isGateway}},
         events: {
-            path: resolve(import.meta.dirname, './events')
+            path: './events'
         }{{/if}}
     },
     subscribers: {
@@ -39,6 +38,6 @@ export const seedcord = new Seedcord({
     notifications: {
         developerUsername: '{{ developerUsername }}'
     }
-});
+}).attach('uptime', Uptime);
 
 export default seedcord;

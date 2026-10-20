@@ -1,23 +1,115 @@
-import { chmod, mkdir, mkdtempDisposable } from 'node:fs/promises';
+import { chmod, mkdir, mkdtempDisposable, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { SeedcordErrorCode } from '@seedcord/errors';
+import { BotLayout } from '@seedcord/utils/internal';
+import { createServer } from 'vite';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { ProjectFiles } from '#core/project/ProjectFiles';
+import { realPath } from '#core/project/realPath';
 
-async function projectRoot(): Promise<string> {
+import type { RealPath } from '#core/project/realPath';
+
+async function projectRoot(): Promise<RealPath> {
     const tmp = await mkdtempDisposable(join(tmpdir(), 'seedcord-files-'));
     onTestFinished(() => tmp.remove());
-    return tmp.path;
+    return realPath(tmp.path);
 }
+
+function filesUnder(root: RealPath): ProjectFiles {
+    return new ProjectFiles({
+        root,
+        configFile: realPath(join(root, 'seedcord.config.ts')),
+        files: [],
+        target: { kind: 'server', start: undefined, outDir: realPath(join(root, 'dist')) }
+    });
+}
+
+// import.meta.glob's output lists each match as a "./key": entry, relative to base
+async function globKeys(root: string, globs: string[]): Promise<string[]> {
+    await writeFile(
+        join(root, '.probe.ts'),
+        `export default import.meta.glob(${JSON.stringify(globs)}, { base: '/' });\n`
+    );
+    const server = await createServer({ root, configFile: false, logLevel: 'silent', server: { watch: null } });
+    onTestFinished(() => server.close());
+    const transformed = await server.transformRequest('/.probe.ts');
+    const keys = [...(transformed?.code ?? '').matchAll(/"\.?(\/[^"]+)":/g)].map(([, key]) => key ?? '');
+    expect(keys).not.toEqual([]);
+    return keys.toSorted();
+}
+
+describe('the build globs', () => {
+    it.for([
+        { shape: 'root is the project folder', rootDir: '.', listedDir: './locales' },
+        { shape: 'files lists the project folder beside a src root', rootDir: './src', listedDir: '.' }
+    ])('match the files the layout says belong to the bot when $shape', async ({ rootDir, listedDir }) => {
+        const projectDir = await projectRoot();
+        const tree = [
+            'handlers/Ping.ts',
+            'handlers/Dice.tsx',
+            'handlers/types.d.ts',
+            'handlers/.drafts/Draft.ts',
+            'node_modules/pkg/index.js',
+            'dist/index.mjs',
+            'logs/today.log',
+            'src/dist/shape.ts',
+            'seedcord.config.ts',
+            'package.json',
+            'tsconfig.build.json',
+            'bun.lock',
+            'locales/package.json',
+            'locales/en.json',
+            'locales/theme.ts',
+            'locales/.cache/stale.json',
+            'locales/node_modules/pkg/data.json'
+        ];
+        for (const file of tree) {
+            await mkdir(join(projectDir, file, '..'), { recursive: true });
+            await writeFile(join(projectDir, file), '{}\n');
+        }
+        const files = new ProjectFiles({
+            root: realPath(join(projectDir, rootDir)),
+            configFile: realPath(join(projectDir, 'seedcord.config.ts')),
+            files: [realPath(join(projectDir, listedDir))],
+            target: { kind: 'server', start: undefined, outDir: realPath(join(projectDir, 'dist')) }
+        });
+        const { layout } = files;
+        const keyOf = (file: string): string => BotLayout.keyUnder(projectDir, file);
+        const listed = tree.map((file) => join(projectDir, file)).filter((file) => layout.isListedFile(file));
+        const modules = await files.modulePaths();
+
+        await expect(globKeys(projectDir, layout.moduleGlobs(rootDir))).resolves.toEqual(modules.map(keyOf));
+        await expect(globKeys(projectDir, layout.listedFileGlobs(rootDir))).resolves.toEqual(
+            listed.map(keyOf).toSorted()
+        );
+    });
+
+    it.for(['[en]', '{en,fr}', '(en)', '@(en)', '+(en)'])(
+        'match every file in a listed folder named %s',
+        async (folder) => {
+            const root = await projectRoot();
+            await mkdir(join(root, folder));
+            await writeFile(join(root, folder, 'hi.json'), '{}\n');
+            const { layout } = new ProjectFiles({
+                root,
+                configFile: realPath(join(root, 'seedcord.config.ts')),
+                files: [realPath(join(root, folder))],
+                target: { kind: 'server', start: undefined, outDir: realPath(join(root, 'dist')) }
+            });
+
+            await expect(globKeys(root, layout.listedFileGlobs())).resolves.toEqual([`/${folder}/hi.json`]);
+        }
+    );
+});
 
 describe('ProjectFiles', () => {
     // the bot and its plugins run between the load checks and the bundle
     it('lists a folder created after the # check ran', async () => {
         const root = await projectRoot();
-        const files = new ProjectFiles(root, join(root, 'dist'), root);
+        const files = filesUnder(root);
 
         await files.pathsWithHash();
         await mkdir(join(root, 'made-on-load'));
@@ -25,10 +117,27 @@ describe('ProjectFiles', () => {
         await expect(files.foldersIncludingEmpty()).resolves.toContain('/made-on-load');
     });
 
+    it('lists only files as modules when a folder is named like one', async () => {
+        const root = await projectRoot();
+        await mkdir(join(root, 'handlers', 'group.ts'), { recursive: true });
+        await writeFile(join(root, 'handlers', 'group.ts', 'Ping.ts'), 'export {};\n');
+
+        await expect(filesUnder(root).modulePaths()).resolves.toEqual([join(root, 'handlers', 'group.ts', 'Ping.ts')]);
+    });
+
+    it('skips a project file written beside the config after the layout was read', async () => {
+        const root = await projectRoot();
+        const { layout } = filesUnder(root);
+
+        await writeFile(join(root, 'tsconfig.json'), '{}\n');
+
+        expect(layout.isSkipped(join(root, 'tsconfig.json'))).toBe(true);
+    });
+
     // root reads a folder whatever its mode.
     // windows ignores the posix mode bits.
     it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
-        'throws CoreDirectoryUnreadable for a folder it cannot read',
+        'throws CorePathUnreadable for a folder it cannot read',
         async () => {
             const root = await projectRoot();
             const locked = join(root, 'locked');
@@ -36,8 +145,8 @@ describe('ProjectFiles', () => {
             await chmod(locked, 0o000);
             onTestFinished(() => chmod(locked, 0o700));
 
-            await expect(new ProjectFiles(root, join(root, 'dist'), root).pathsWithHash()).rejects.toMatchObject({
-                code: SeedcordErrorCode.CoreDirectoryUnreadable,
+            await expect(filesUnder(root).pathsWithHash()).rejects.toMatchObject({
+                code: SeedcordErrorCode.CorePathUnreadable,
                 message: expect.stringContaining('locked') as string
             });
         }

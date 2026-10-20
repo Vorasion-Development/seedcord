@@ -1,17 +1,20 @@
+import type { Prompter } from '@seedcord/cli-prompts';
+import type { BotToken } from '@seedcord/errors/internal';
 import type { ColorName } from '@seedcord/types';
 
 export interface Answers {
     directory: string;
     transport: 'gateway' | 'http';
-    // capability ids the intent map resolves into intents and partials
+    runtime: 'server' | 'edge';
     capabilities: string[];
-    // null leaves the key empty in .env for the user to fill in
-    token: string | null;
-    publicKey: string | null;
+    token: BotToken | null;
+    testingGuilds: string[];
     botColor: ColorName | `#${string}`;
+    install: boolean;
+    git: boolean;
 }
 
-interface FlagSpec<Key extends keyof Answers> {
+interface ValueFlag<Key extends keyof Answers> {
     // no leading dashes
     name: string;
     // one line, printed by --help
@@ -21,12 +24,22 @@ interface FlagSpec<Key extends keyof Answers> {
     noFlag?: null extends Answers[Key] ? string : never;
 }
 
+// --<name> answers true and --no-<name> answers false
+interface SwitchFlag {
+    name: string;
+    description: string;
+    noFlag: string;
+}
+
 export interface Step<Key extends keyof Answers> {
     key: Key;
-    flag: FlagSpec<Key>;
+    label: string;
+    flag: Answers[Key] extends boolean ? SwitchFlag : ValueFlag<Key>;
     // a skipped step leaves its key unset
     skip?: (answers: Partial<Answers>) => boolean;
-    ask: (answers: Partial<Answers>) => Promise<Answers[Key]>;
+    answerWithoutTerminal?: Answers[Key];
+    ask: (answers: Partial<Answers>, prompter: Prompter) => Promise<Answers[Key]>;
+    shown: (answer: Answers[Key]) => string;
 }
 
 // a mixed list of steps assigns to one array

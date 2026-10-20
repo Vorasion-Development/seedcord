@@ -1,5 +1,6 @@
 import { paint } from '@seedcord/errors';
 import { filterCirculars, stripAnsi } from '@seedcord/utils';
+import { pluralize } from '@seedcord/utils/internal';
 import chalk from 'chalk';
 import { format } from 'winston';
 
@@ -122,7 +123,7 @@ export class LogFormatter {
         }
 
         const hidden = members.length - MEMBER_CAP;
-        if (hidden > 0) blocks += `\n${aside(`and ${hidden} more failure${hidden === 1 ? '' : 's'}`)}`;
+        if (hidden > 0) blocks += `\n${aside(`and ${hidden} more ${pluralize(hidden, 'failure')}`)}`;
         return blocks;
     }
 
@@ -213,32 +214,42 @@ export class LogFormatter {
                 const extras: unknown[] = Array.isArray(savedExtras) ? savedExtras : this.getExtras(info);
 
                 let rendered = base;
+                const append = (separator: string, text: string): void => {
+                    if (text) rendered = rendered ? `${rendered}${separator}${text}` : text;
+                };
 
                 if (typeof info.stack === 'string') {
                     let stack = this.safeString(info.stack);
                     if (options.stripExtras) stack = stripAnsi(stack);
-                    rendered += `\n${stack}`;
                     // the stringified info.stack dropped the cause, re-derive it from the Error
                     const firstError = extras.find((entry): entry is Error => Error.isError(entry));
-                    if (firstError) rendered += this.detailBlock(firstError, options.stripExtras === true);
+                    append(
+                        '\n',
+                        firstError ? stack + this.detailBlock(firstError, options.stripExtras === true) : stack
+                    );
                 }
 
                 const rawFormatCount = info[HAD_FORMAT_KEY];
                 const formatSpecifierCount = typeof rawFormatCount === 'number' ? rawFormatCount : 0;
-                return (
-                    rendered +
-                    this.renderExtras(
-                        extras,
-                        typeof info.stack === 'string',
-                        formatSpecifierCount,
-                        options.stripExtras === true
-                    )
+                const { inline, block } = this.renderExtras(
+                    extras,
+                    typeof info.stack === 'string',
+                    formatSpecifierCount,
+                    options.stripExtras === true
                 );
+                append(' ', inline);
+                append('\n', block);
+                return rendered;
             })
         ];
     }
 
-    private renderExtras(extras: unknown[], hasStack: boolean, formatSpecifierCount: number, strip: boolean): string {
+    private renderExtras(
+        extras: unknown[],
+        hasStack: boolean,
+        formatSpecifierCount: number,
+        strip: boolean
+    ): { inline: string; block: string } {
         const cleaned = strip ? extras.map((entry) => this.sanitizeAnsi(entry)) : extras;
         let firstErrorDropped = false;
         const filtered = cleaned.filter((x, index) => {
@@ -256,7 +267,7 @@ export class LogFormatter {
             if (typeof x !== 'object') return true;
             return Object.keys(x).length > 0;
         });
-        if (filtered.length === 0) return '';
+        if (filtered.length === 0) return { inline: '', block: '' };
 
         const primitives: string[] = [];
         const objects: string[] = [];
@@ -272,9 +283,7 @@ export class LogFormatter {
             }
         }
 
-        const inline = primitives.length > 0 ? ` ${primitives.join(' ')}` : '';
-        const block = objects.length > 0 ? `\n${objects.join('\n')}` : '';
-        return inline + block;
+        return { inline: primitives.join(' '), block: objects.join('\n') };
     }
 
     public json(options: JsonFormatOptions = {}): Logform.Format[] {

@@ -1,88 +1,101 @@
-import { existsSync } from 'node:fs';
-import { extname, join } from 'node:path';
+import { join } from 'node:path';
 
-import { SeedcordErrorCode } from '@seedcord/errors';
-import { SeedcordError } from '@seedcord/errors/internal';
-import { build } from 'vite';
+import { BotLayout, withoutQuery } from '@seedcord/utils/internal';
+import { createBuilder } from 'vite';
 
+import { BOT_ENVIRONMENT, botEnvironment } from '#core/modules/botEnvironment';
+
+import { assertOutDirSafe } from './assertOutDirSafe';
+import { isListedFileId, listedFileOf } from './builtFiles';
 import { bundleFailed, bundleStats, ENTRY_FILE_NAME } from './output';
 import { pinModulePaths } from './pinModulePaths';
-import { serverCommands } from './serverCommands';
 import { ENTRY_ID, isServerEntry, serverEntry } from './serverEntry';
 import { TargetBuild } from './TargetBuild';
 
+import type { ResolvedSeedcordConfig, ResolvedServerTarget } from '#core/config/schema';
 import type { Project } from '#core/project/Project';
 import type { BundleStats } from './output';
-import type { NextCommand } from './TargetBuild';
-import type { Rolldown } from 'vite';
+import type { BuildEnvironmentOptions, PluginOption, Rolldown, ViteBuilder } from 'vite';
 
 const NODE_TARGET = 'node24';
 
-function outputChunks(result: Awaited<ReturnType<typeof build>>): Rolldown.OutputChunk[] {
+function outputChunks(result: Awaited<ReturnType<ViteBuilder['build']>>): Rolldown.OutputChunk[] {
     // vite returns a watcher only under build.watch
     const outputs = [result].flat().filter((output) => 'output' in output);
     return outputs.flatMap(({ output }) => output.filter((file) => file.type === 'chunk'));
 }
 
-// Echo.ts builds to Echo.js and Echo.json to Echo.json.js
-function outputName(moduleId: string | null | undefined): string {
+function outputName(moduleId: string | null | undefined, layout: BotLayout): string {
     if (isServerEntry(moduleId)) return ENTRY_FILE_NAME;
-    const extension = extname(moduleId?.split('?')[0] ?? '');
-    if (extension === '' || extension === '.ts' || extension === '.js') return '[name].js';
-    return `[name]${extension}.js`;
+    if (moduleId && isListedFileId(moduleId)) return `_virtual/files${layout.listedKeyOf(listedFileOf(moduleId))}.js`;
+    return `[name]${BotLayout.builtExtension(withoutQuery(moduleId ?? ''))}`;
 }
 
-export class ServerBuild extends TargetBuild {
+export abstract class ServerBuild<Target extends ResolvedServerTarget = ResolvedServerTarget> extends TargetBuild {
+    public readonly kind = 'server';
+
     constructor(
         project: Project,
-        private readonly entry: string
+        protected readonly target: Target
     ) {
         super(project);
     }
 
-    public check(): void {
-        if (!existsSync(this.entry)) throw new SeedcordError(SeedcordErrorCode.CliEntryNotFound, [this.entry]);
+    public static check(_: ResolvedSeedcordConfig, { outDir }: ResolvedServerTarget): void {
+        assertOutDirSafe(outDir);
     }
 
-    public nextCommands(bundle: BundleStats): NextCommand[] {
-        return serverCommands(this.project.config.configFile, bundle.entry);
-    }
+    public abstract bundle(): Promise<BundleStats>;
 
-    public async bundle(): Promise<BundleStats> {
-        const { config, files } = this.project;
-        const { entry } = this;
+    protected async bundleJs(importBot: string[]): Promise<BundleStats> {
+        const { config, configDir, files } = this.project;
+        const { layout } = files;
+        const { outDir } = this.target;
         const { root } = config;
-        const { outDir } = config.build;
-        const folders = await files.foldersIncludingEmpty();
+        const builtFiles = {
+            layout,
+            folders: await files.foldersIncludingEmpty(),
+            rootKey: BotLayout.keyUnder(configDir, root),
+            configFile: BotLayout.keyUnder(outDir, config.configFile)
+        };
 
-        const result = await build({
-            root,
+        const result = await this.buildBot([serverEntry(builtFiles, importBot), pinModulePaths(layout)], {
+            outDir,
+            emptyOutDir: true,
+            sourcemap: true,
+            minify: false,
+            target: NODE_TARGET,
+            rolldownOptions: {
+                input: ENTRY_ID,
+                output: {
+                    format: 'esm',
+                    preserveModules: true,
+                    preserveModulesRoot: root,
+                    entryFileNames: (chunk) => outputName(chunk.facadeModuleId, layout)
+                }
+            }
+        });
+        return bundleStats(outputChunks(result), layout, join(outDir, ENTRY_FILE_NAME));
+    }
+
+    protected async buildBot(
+        plugins: PluginOption[],
+        build: BuildEnvironmentOptions
+    ): Promise<Awaited<ReturnType<ViteBuilder['build']>>> {
+        const { config, configDir } = this.project;
+        const builder = await createBuilder({
+            root: configDir,
+            mode: config.viteMode,
             configFile: false,
             // vite copies <root>/public into outDir otherwise
             publicDir: false,
             logLevel: 'warn',
-            plugins: [serverEntry({ files, entry, folders }), pinModulePaths(files)],
+            plugins: [...plugins, config.vitePlugins.create()],
+            // vite's oxc transform would empty the declarations rolldown-plugin-dts emits. this list replaces vite's default of .js
+            oxc: { exclude: [/\.js$/, /\.d\.[cm]?ts$/] },
             resolve: { tsconfigPaths: true },
-            build: {
-                ssr: true,
-                outDir,
-                emptyOutDir: true,
-                sourcemap: true,
-                minify: false,
-                target: NODE_TARGET,
-                rolldownOptions: {
-                    input: ENTRY_ID,
-                    output: {
-                        format: 'esm',
-                        preserveModules: true,
-                        preserveModulesRoot: root,
-                        entryFileNames: (chunk) => outputName(chunk.facadeModuleId)
-                    }
-                }
-            },
-            ssr: { target: 'node', external: true }
+            environments: { [BOT_ENVIRONMENT]: { resolve: { external: true }, build } }
         }).catch(bundleFailed);
-
-        return bundleStats(outputChunks(result), files, join(outDir, ENTRY_FILE_NAME));
+        return builder.build(botEnvironment(builder.environments)).catch(bundleFailed);
     }
 }

@@ -1,12 +1,21 @@
-import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { basename, resolve } from 'node:path';
 
 import { HANDLERS_LOADED } from '#lib/markers';
-import { readTextFiles } from '@seedcord/utils/node';
+import { readFiles, importFiles } from '@seedcord/http';
 
-for (const folder of ['../locales', '../logs']) {
-    for await (const { text } of readTextFiles(resolve(import.meta.dirname, folder))) {
-        console.log(`fixture:text ${text.trim()}`);
+for (const folder of ['../locales', '../logs', '../../shared']) {
+    for await (const { bytes } of readFiles(resolve(import.meta.dirname, folder))) {
+        console.log(`fixture:text ${bytes.toString().trim()}`);
     }
+}
+
+for await (const { fullPath, bytes } of readFiles('./assets')) {
+    console.log(`fixture:bytes ${basename(fullPath)} ${createHash('sha256').update(bytes).digest('hex')}`);
+}
+
+for await (const { fullPath } of importFiles(resolve(import.meta.dirname, '../lib'))) {
+    console.log(`fixture:module ${basename(fullPath)}`);
 }
 
 console.log('fixture:literal import.meta.dirname stays text');

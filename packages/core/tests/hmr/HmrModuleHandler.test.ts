@@ -2,6 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { SeedcordErrorCode } from '@seedcord/errors';
+import { setDevFiles } from '@seedcord/utils/internal';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { HmrModuleHandler } from '#hmr/HmrModuleHandler';
@@ -92,6 +94,19 @@ describe('HmrModuleHandler', () => {
         expect(registerMiddleware).not.toHaveBeenCalled();
     });
 
+    it.each(['.drafts', 'node_modules/pkg'])(
+        'ignores a handler saved under %s, which startup skips',
+        async (folder) => {
+            const file = join(handlersDir, folder, 'Ping.mjs');
+            mkdirSync(join(handlersDir, folder), { recursive: true });
+            writeFileSync(file, 'export class Ping {}\n');
+
+            await handler.handle({ file, type: 'update' });
+
+            expect(registerHandler).not.toHaveBeenCalled();
+        }
+    );
+
     it('skips a created directory without logging a failed reload', async () => {
         const { logger, spies } = fakeLogger();
         const withSpies = new HmrModuleHandler<TestHandler>({
@@ -118,6 +133,27 @@ describe('HmrModuleHandler', () => {
 
         expect(registerHandler).toHaveBeenCalledTimes(1);
         expect(registerHandler.mock.calls[0]?.[1]).toBe(file);
+    });
+
+    it('reloads a handler file when the handlers dir is relative to root', async () => {
+        using _dev = setDevFiles({
+            root: dir,
+            listed: [],
+            skippedFolders: []
+        });
+        const relative = new HmrModuleHandler<TestHandler>({
+            handlersDir: './commands',
+            isHandler,
+            registerHandler,
+            unregisterHandler,
+            logger: fakeLogger().logger
+        });
+        const file = join(handlersDir, 'Ping.mjs');
+        writeFileSync(file, 'export class Ping {}\n');
+
+        await relative.handle({ file, type: 'update' });
+
+        expect(registerHandler).toHaveBeenCalledTimes(1);
     });
 
     it('reports the reload with how long it took', async () => {
@@ -231,16 +267,6 @@ describe('HmrModuleHandler', () => {
         expect(unregisterHandler).toHaveBeenCalledWith(FixtureHandler, undefined);
     });
 
-    it('treats an update for a missing tracked file as a delete', async () => {
-        const file = join(handlersDir, 'Gone.mjs');
-        handler.trackHandler(file, FixtureHandler);
-
-        await handler.handle({ file, type: 'update' });
-
-        expect(unregisterHandler).toHaveBeenCalledWith(FixtureHandler, undefined);
-        expect(registerHandler).not.toHaveBeenCalled();
-    });
-
     it('restores the last-good handler when a reload fails', async () => {
         const file = join(handlersDir, 'Broken.mjs');
         handler.trackHandler(file, FixtureHandler);
@@ -279,5 +305,30 @@ describe('HmrModuleHandler', () => {
 
         expect(unregisterHandler).toHaveBeenCalledWith(FixtureHandler, undefined);
         expect(registerHandler).not.toHaveBeenCalled();
+    });
+
+    it('logs CoreVitePluginThrew when a plugin from vitePlugins throws during a reload', async () => {
+        const { logger, spies } = fakeLogger();
+        const withSpies = new HmrModuleHandler<TestHandler>({
+            handlersDir,
+            isHandler,
+            registerHandler,
+            unregisterHandler,
+            logger
+        });
+        const file = join(handlersDir, 'Shop.mjs');
+        const utils = import.meta.resolve('@seedcord/utils/internal');
+        const thrownBy = { plugin: 'shop-loader', hook: 'load', configFile: join(dir, 'seedcord.config.ts') };
+        writeFileSync(
+            file,
+            `import { recordThrownBy } from ${JSON.stringify(utils)};\nthrow recordThrownBy(new Error('bad yaml'), ${JSON.stringify(thrownBy)});\n`
+        );
+
+        await withSpies.handle({ file, type: 'update' });
+
+        expect(spies.error.mock.calls[0]?.[1]).toMatchObject({
+            code: SeedcordErrorCode.CoreVitePluginThrew,
+            message: expect.stringContaining('shop-loader') as string
+        });
     });
 });

@@ -19,11 +19,10 @@ import {
 import { InFlight } from '@seedcord/core/node/internal';
 import { prefixOf } from '@seedcord/custom-id';
 import { SeedcordErrorCode, paint } from '@seedcord/errors';
-import { SeedcordError } from '@seedcord/errors/internal';
+import { SeedcordError, SeedcordTypeError } from '@seedcord/errors/internal';
 import { Logger } from '@seedcord/logger';
-import { formatFilePath, hasKeys } from '@seedcord/utils';
+import { formatFilePath, hasKeys, importFiles } from '@seedcord/utils';
 import { asError } from '@seedcord/utils/internal';
-import { traverseDirectory } from '@seedcord/utils/node';
 import { Events } from 'discord.js';
 import { Envapter } from 'envapt';
 
@@ -259,7 +258,7 @@ export class InteractionDispatcher implements Initializeable, HmrAware {
     }
 
     private async loadHandlers(dir: string): Promise<void> {
-        for await (const { fullPath, relativePath, imported } of traverseDirectory(dir)) {
+        for await (const { fullPath, relativePath, imported } of importFiles(dir)) {
             for (const val of Object.values(imported)) {
                 if (!this.isHandlerClass(val)) continue;
                 this.registerHandler(val, relativePath);
@@ -269,7 +268,7 @@ export class InteractionDispatcher implements Initializeable, HmrAware {
     }
 
     private async loadMiddlewares(dir: string): Promise<void> {
-        for await (const { fullPath, relativePath, imported } of traverseDirectory(dir)) {
+        for await (const { fullPath, relativePath, imported } of importFiles(dir)) {
             for (const val of Object.values(imported)) {
                 if (!this.isMiddlewareClass(val)) continue;
 
@@ -316,11 +315,14 @@ export class InteractionDispatcher implements Initializeable, HmrAware {
                 const existing = this.maps[kind].get(route);
                 // a different class on the same route would silently shadow (last write wins)
                 if (existing && existing !== handlerClass) {
-                    throw new SeedcordError(SeedcordErrorCode.InteractionDuplicateRoute, [
+                    throw new SeedcordTypeError(SeedcordErrorCode.CoreDuplicateName, [
+                        'route',
                         `${kind}:${route}`,
-                        // a stale hmr artifact list can leave a class in a route map after its entry here is gone
-                        `${existing.name} (${this.handlerFiles.get(existing) ?? 'unknown file'})`,
-                        `${handlerClass.name} (${from})`
+                        [
+                            // a stale hmr artifact list can leave a class in a route map after its entry here is gone
+                            `${paint.bold(existing.name)} (${paint.path(this.handlerFiles.get(existing) ?? 'unknown file')})`,
+                            `${paint.bold(handlerClass.name)} (${paint.path(from)})`
+                        ]
                     ]);
                 }
                 writes.push({ kind, route });

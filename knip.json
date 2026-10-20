@@ -47,8 +47,8 @@
             ]
         },
         "apps/home": {
-            "entry": ["src/app/**/{page,layout,route,not-found}.{ts,tsx}"],
-            "project": ["src/**/*.{ts,tsx,css}"]
+            "entry": ["src/app/**/{page,layout,route,not-found,sitemap}.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
+            "project": ["src/**/*.{ts,tsx,css}", "tests/**/*.{ts,tsx}"]
         },
         "packages/core": {
             "entry": ["**/*.types-test.ts", "tests/**/fixtures/**"]
@@ -69,6 +69,7 @@
             "ignoreDependencies": ["discord.js"]
         },
         "tooling/eslint-utils": {},
+        "tooling/cli-prompts": {},
         "packages/event-emitter": {
             "entry": ["**/*.types-test.ts"]
         },
@@ -85,14 +86,15 @@
             "entry": ["**/*.types-test.ts"]
         },
         "packages/logger": {
-            "entry": ["**/*.types-test.ts"]
+            "entry": ["**/*.types-test.ts", "tests/fixtures/*.ts"],
+            "ignoreDependencies": ["tsx"]
         },
         "packages/rate-limiter": {},
         "packages/types": {
             "entry": ["**/*.types-test.ts"]
         },
         "packages/utils": {
-            "ignore": ["tests/node/fixtures/**"],
+            "ignore": ["tests/files/fixtures/**"],
             "ignoreDependencies": ["tsx"]
         },
         "plugins/kysely-postgres": {
@@ -102,8 +104,8 @@
             "entry": ["**/*.types-test.ts"]
         },
         "cli/seedcord": {
-            "entry": ["tests/fixtures/*/**/*.{ts,js}"],
-            "ignoreDependencies": ["cloudflare"]
+            "entry": ["**/*.types-test.ts", "tests/fixtures/*/**/*.{ts,tsx,mts,js,jsx,mjs}"],
+            "ignoreDependencies": ["cloudflare", "@leeoniya/ufuzzy"]
         },
         "cli/create-seedcord": {
             "entry": ["**/*.types-test.ts"]

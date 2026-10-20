@@ -1,17 +1,20 @@
 import { spawn } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
+import { tmpdir } from 'node:os';
 
 type Kind = 'http' | 'gateway';
 
 // a discord token is base64 of the app id, a 6 char timestamp, and a 27 char hmac
-const APP_ID = '1000000000000000000';
+export const APP_ID = '1000000000000000000';
 const TIMESTAMP_CHARS = 6;
 const HMAC_CHARS = 27;
 export const FAKE_TOKEN = `${btoa(APP_ID).replaceAll('=', '')}.${'b'.repeat(TIMESTAMP_CHARS)}.${'c'.repeat(HMAC_CHARS)}`;
 
-const ED25519_KEY_BYTES = 32;
+export const ED25519_KEY_BYTES = 32;
 const UNAUTHORIZED = 401;
 const SMOKE_TIMEOUT_MS = 30_000;
+const KILL_AFTER_MS = 10_000;
+const OUTSIDE_EVERY_FIXTURE = tmpdir();
 
 // an spki-encoded ed25519 key ends with its raw bytes
 function publicKeyHex(): string {
@@ -21,6 +24,7 @@ function publicKeyHex(): string {
 
 export async function smoke(kind: Kind, command: string, args: string[] = []): Promise<string> {
     const child = spawn(command, args, {
+        cwd: OUTSIDE_EVERY_FIXTURE,
         env: { ...process.env, DISCORD_BOT_TOKEN: FAKE_TOKEN, DISCORD_PUBLIC_KEY: publicKeyHex() },
         stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -61,5 +65,8 @@ export async function smoke(kind: Kind, command: string, args: string[] = []): P
         return output;
     } finally {
         child.kill();
+        const forceKill = setTimeout(() => child.kill('SIGKILL'), KILL_AFTER_MS);
+        await exited;
+        clearTimeout(forceKill);
     }
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildContext } from '#template/context';
+import { BOT_TOKEN } from '#tests/token';
 
 import type { ScaffoldAnswers } from '#template/context';
 
@@ -8,16 +9,22 @@ const GATEWAY: ScaffoldAnswers = {
     directory: 'my-bot',
     transport: 'gateway',
     capabilities: ['reactions'],
-    token: 'aaa.bbb.ccc',
-    botColor: 'Blurple'
+    token: BOT_TOKEN,
+    testingGuilds: [],
+    botColor: 'Blurple',
+    install: true,
+    git: true
 };
 
 const HTTP: ScaffoldAnswers = {
     directory: 'edge/my-bot',
     transport: 'http',
-    token: 'aaa.bbb.ccc',
-    publicKey: 'a'.repeat(64),
-    botColor: '#ff8800'
+    runtime: 'server',
+    token: BOT_TOKEN,
+    testingGuilds: [],
+    botColor: '#ff8800',
+    install: true,
+    git: true
 };
 
 const EXTRAS = { developerUsername: 'dhruv', agent: 'pnpm' } as const;
@@ -42,10 +49,6 @@ describe('buildContext on gateway', () => {
     it('sees no message capability behind reactions alone', () => {
         expect(context.hasMessages).toBe(false);
     });
-
-    it('leaves the public key empty, since gateway never asks for one', () => {
-        expect(context.publicKey).toBe('');
-    });
 });
 
 describe('buildContext on http', () => {
@@ -64,10 +67,6 @@ describe('buildContext on http', () => {
         expect(context.intents).toEqual([]);
         expect(context.partials).toEqual([]);
         expect(context.hasMessages).toBe(false);
-    });
-
-    it('carries the public key through', () => {
-        expect(context.publicKey).toBe('a'.repeat(64));
     });
 });
 

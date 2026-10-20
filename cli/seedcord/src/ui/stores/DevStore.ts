@@ -1,14 +1,19 @@
-import { TypedEventEmitter } from '@seedcord/event-emitter';
 import { assertNever } from '@seedcord/utils';
+
+import { ChangeStore } from './ChangeStore';
+import { isSessionLive } from './devPhase';
 
 import type { DevEvent } from '#commands/dev/runtime/events';
 import type { TunnelStatus } from '#commands/dev/tunnel/TunnelCoordinator';
+import type { ResolvedTarget } from '#core/config/schema';
+import type { Confirmable } from '#ui/confirms';
 import type { DevPhase } from './devPhase';
 
 export interface DevTransport {
     // the transport package, '@seedcord/gateway' or '@seedcord/http'
     readonly name: string;
     readonly version: string;
+    readonly target: ResolvedTarget['kind'];
 }
 
 export interface DevState {
@@ -21,8 +26,9 @@ export interface DevState {
     readonly commandUpdatePrompt: string[] | null;
     readonly port: number | null;
     readonly tunnel: TunnelStatus | null;
-    readonly quitArmed: boolean;
+    readonly armed: Confirmable | null;
     readonly idleAnimation: boolean;
+    readonly liveSinceMs: number | null;
 }
 
 const INITIAL: DevState = {
@@ -35,11 +41,12 @@ const INITIAL: DevState = {
     commandUpdatePrompt: null,
     port: null,
     tunnel: null,
-    quitArmed: false,
-    idleAnimation: true
+    armed: null,
+    idleAnimation: true,
+    liveSinceMs: null
 };
 
-export class DevStore extends TypedEventEmitter<{ change: [] }> {
+export class DevStore extends ChangeStore {
     private state: DevState = INITIAL;
 
     // a stable reference between mutations, which useSyncExternalStore needs to avoid render loops
@@ -71,8 +78,8 @@ export class DevStore extends TypedEventEmitter<{ change: [] }> {
         this.patch({ tunnel });
     }
 
-    public setQuitArmed(quitArmed: boolean): void {
-        this.patch({ quitArmed });
+    public setArmed(armed: Confirmable | null): void {
+        this.patch({ armed });
     }
 
     public setIdleAnimation(idleAnimation: boolean): void {
@@ -128,10 +135,8 @@ export class DevStore extends TypedEventEmitter<{ change: [] }> {
                 this.patch({ port: event.port });
                 break;
             }
-            case 'module-loading':
-            case 'module-loaded':
-            case 'module-error':
-            case 'ready': {
+            case 'progress': {
+                this.patch({ status: event.status });
                 break;
             }
             default: {
@@ -141,7 +146,10 @@ export class DevStore extends TypedEventEmitter<{ change: [] }> {
     }
 
     private patch(next: Partial<DevState>): void {
-        this.state = { ...this.state, ...next };
+        const merged = { ...this.state, ...next };
+        const liveSinceMs = isSessionLive(merged.phase) ? (this.state.liveSinceMs ?? Date.now()) : null;
+        const armed = merged.phase === this.state.phase ? merged.armed : null;
+        this.state = { ...merged, liveSinceMs, armed };
         this.emit('change');
     }
 }

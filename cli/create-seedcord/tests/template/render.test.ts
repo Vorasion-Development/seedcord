@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildContext } from '#template/context';
 import { renderTemplates } from '#template/render';
+import { BOT_TOKEN } from '#tests/token';
 
 import type { ScaffoldAnswers } from '#template/context';
 
@@ -15,17 +16,25 @@ const GATEWAY: ScaffoldAnswers = {
     directory: 'my-bot',
     transport: 'gateway',
     capabilities: ['reactions'],
-    token: 'aaa.bbb.ccc',
-    botColor: 'Blurple'
+    token: BOT_TOKEN,
+    testingGuilds: [],
+    botColor: 'Blurple',
+    install: true,
+    git: true
 };
 
 const HTTP: ScaffoldAnswers = {
     directory: 'my-bot',
     transport: 'http',
-    token: 'aaa.bbb.ccc',
-    publicKey: 'a'.repeat(64),
-    botColor: 'Blurple'
+    runtime: 'server',
+    token: BOT_TOKEN,
+    testingGuilds: [],
+    botColor: 'Blurple',
+    install: true,
+    git: true
 };
+
+const EDGE: ScaffoldAnswers = { ...HTTP, runtime: 'edge' };
 
 async function render(answers: ScaffoldAnswers): Promise<Map<string, string>> {
     const files = await renderTemplates(TEMPLATES, buildContext(answers, EXTRAS));
@@ -41,11 +50,24 @@ async function renderOne(answers: ScaffoldAnswers, path: string): Promise<string
     return contents;
 }
 
+async function scriptsOf(answers: ScaffoldAnswers): Promise<Record<string, string | undefined>> {
+    const manifest = JSON.parse(await renderOne(answers, 'package.json')) as { scripts: Record<string, string> };
+    return manifest.scripts;
+}
+
 describe('renderTemplates', () => {
     it('writes a bunfig.toml that runs the cli on Bun for a Bun project', async () => {
         const files = await renderTemplates(TEMPLATES, buildContext(GATEWAY, { ...EXTRAS, agent: 'bun' }));
 
         expect(files.find((file) => file.path === 'bunfig.toml')?.contents).toBe('[run]\nbun = true\n');
+    });
+
+    it('writes a pnpm-workspace.yaml that ignores unrs-resolver scripts for a pnpm project', async () => {
+        const files = await renderTemplates(TEMPLATES, buildContext(GATEWAY, { ...EXTRAS, agent: 'pnpm' }));
+
+        expect(files.find((file) => file.path === 'pnpm-workspace.yaml')?.contents).toBe(
+            'allowBuilds:\n    unrs-resolver: false\n'
+        );
     });
 
     it("declares this package's Bun floor for a Bun project and its Node floor for the rest", async () => {
@@ -63,10 +85,25 @@ describe('renderTemplates', () => {
         expect(await engines('pnpm')).toEqual({ node: own.engines.node });
     });
 
-    it('writes no bunfig.toml for another package manager', async () => {
-        const files = await render(GATEWAY);
+    it('runs the cli of an edge bot on Node in a Bun project', async () => {
+        const own = createRequire(import.meta.url)('../../package.json') as { engines: { node: string } };
+        const files = await renderTemplates(TEMPLATES, buildContext(EDGE, { ...EXTRAS, agent: 'bun' }));
+        const manifest = files.find((file) => file.path === 'package.json')?.contents ?? '{}';
 
-        expect(files.has('bunfig.toml')).toBe(false);
+        expect(files.find((file) => file.path === 'bunfig.toml')).toBeUndefined();
+        expect((JSON.parse(manifest) as { engines?: unknown }).engines).toEqual({ node: own.engines.node });
+    });
+
+    it.each(['npm', 'yarn', 'pnpm'] as const)('writes no bunfig.toml for %s projects', async (agent) => {
+        const files = await renderTemplates(TEMPLATES, buildContext(GATEWAY, { ...EXTRAS, agent }));
+
+        expect(files.find((file) => file.path === 'bunfig.toml')).toBeUndefined();
+    });
+
+    it.each(['npm', 'yarn', 'bun'] as const)('writes no pnpm-workspace.yaml for %s projects', async (agent) => {
+        const files = await renderTemplates(TEMPLATES, buildContext(GATEWAY, { ...EXTRAS, agent }));
+
+        expect(files.find((file) => file.path === 'pnpm-workspace.yaml')).toBeUndefined();
     });
 
     it('drops the .hbs extension', async () => {
@@ -199,23 +236,83 @@ describe('the rendered http config', () => {
         expect(bot).not.toContain('clientOptions');
     });
 
-    it('writes the public key into the env file', async () => {
-        const env = await renderOne(HTTP, '.env');
+    it('writes the test servers you gave into .env', async () => {
+        const env = await renderOne({ ...HTTP, testingGuilds: ['613425648685547541', '1100000000000000000'] }, '.env');
 
-        expect(env).toContain(`DISCORD_PUBLIC_KEY=${'a'.repeat(64)}`);
+        expect(env).toMatch(/^TESTING_GUILD_IDS=613425648685547541,1100000000000000000$/m);
     });
 
-    it('writes both keys empty when they were left for later', async () => {
-        const env = await renderOne({ ...HTTP, token: null, publicKey: null }, '.env');
+    it('writes an empty DISCORD_BOT_TOKEN when you skipped the token', async () => {
+        const env = await renderOne({ ...HTTP, token: null }, '.env');
 
         expect(env).toMatch(/^DISCORD_BOT_TOKEN=$/m);
-        expect(env).toMatch(/^DISCORD_PUBLIC_KEY=$/m);
+    });
+});
+
+describe('the rendered edge project', () => {
+    it('writes a cloudflare.config.ts and no entry file', async () => {
+        const files = await render(EDGE);
+
+        expect(files.has('cloudflare.config.ts')).toBe(true);
+        expect(files.has('src/index.ts')).toBe(false);
     });
 
-    it('leaves the public key out on gateway', async () => {
-        const env = await renderOne(GATEWAY, '.env');
+    it('writes no cloudflare.config.ts for a server bot', async () => {
+        const files = await render(HTTP);
 
-        expect(env).not.toContain('DISCORD_PUBLIC_KEY');
+        expect(files.has('cloudflare.config.ts')).toBe(false);
+    });
+
+    it('writes build.start for a node bot and leaves it out on edge', async () => {
+        expect(await renderOne(EDGE, 'seedcord.config.ts')).not.toContain('start:');
+        expect(await renderOne(HTTP, 'seedcord.config.ts')).toContain("build: { start: './index.ts' }");
+    });
+
+    it("points TypeScript at the worker's build condition and the types cf writes", async () => {
+        const tsconfig = JSON.parse(await renderOne(EDGE, 'tsconfig.json')) as {
+            compilerOptions: { customConditions?: string[] };
+            include: string[];
+        };
+
+        expect(tsconfig.compilerOptions.customConditions).toEqual(['workerd']);
+        expect(tsconfig.include).toContain('cloudflare.config.ts');
+        expect(tsconfig.include).toContain('.cloudflare/types/index.d.ts');
+    });
+
+    it.each([GATEWAY, HTTP, EDGE])("types import.meta.env and keeps node's types", async (answers) => {
+        const tsconfig = JSON.parse(await renderOne(answers, 'tsconfig.json')) as {
+            compilerOptions: { types?: string[] };
+        };
+
+        expect(tsconfig.compilerOptions.types).toEqual(['node', 'vite/client']);
+    });
+
+    it("lets pnpm run workerd's install script", async () => {
+        expect(await renderOne(EDGE, 'pnpm-workspace.yaml')).toBe(
+            'allowBuilds:\n    unrs-resolver: false\n    workerd: true\n'
+        );
+    });
+
+    it('gives an edge bot deploy and types scripts and nothing to start', async () => {
+        const scripts = await scriptsOf(EDGE);
+
+        expect(Object.keys(scripts)).toEqual(expect.arrayContaining(['deploy', 'types', 'postinstall']));
+        expect(scripts.start).toBeUndefined();
+    });
+});
+
+describe('the rendered scripts', () => {
+    it.each([
+        ['gateway', GATEWAY],
+        ['http', HTTP],
+        ['edge', EDGE]
+    ])('give the %s bot commands scripts and a check that runs only scripts it has', async (_kind, answers) => {
+        const scripts = await scriptsOf(answers);
+        const checked = (scripts.check ?? '').split('&&').map((step) => step.trim().replace(/^pnpm run /, ''));
+
+        expect(Object.keys(scripts)).toEqual(expect.arrayContaining(['commands', 'commands:deploy']));
+        expect(checked.length).toBeGreaterThan(1);
+        for (const name of checked) expect(scripts[name], name).toBeDefined();
     });
 });
 

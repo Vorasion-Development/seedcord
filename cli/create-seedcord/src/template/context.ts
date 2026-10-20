@@ -1,18 +1,26 @@
 import { basename } from 'node:path';
 
 import { SeedcordErrorCode } from '@seedcord/errors';
-import { SeedcordError } from '@seedcord/errors/internal';
+import { SeedcordTypeError } from '@seedcord/errors/internal';
 
 import ownPackage from '#package' with { type: 'json' };
 
-import { runPrefix } from '#cli/packageManager';
+import { execPrefix, runPrefix } from '#cli/packageManager';
 import { intentsFor, partialsFor } from '#interview/capabilities';
+import { STEPS } from '#interview/steps';
 
 import type { Answers } from '#interview/types';
 import type { AgentName } from 'package-manager-detector';
 
-// capabilities and publicKey each belong to one transport, and runFlow leaves the other unset
-export type ScaffoldAnswers = Partial<Answers> & Pick<Answers, 'botColor' | 'directory' | 'token' | 'transport'>;
+type SharedAnswers = Omit<Answers, 'transport' | 'runtime' | 'capabilities'>;
+
+export type ScaffoldAnswers =
+    | (SharedAnswers & Pick<Answers, 'capabilities'> & { transport: 'gateway' })
+    | (SharedAnswers & Pick<Answers, 'runtime'> & { transport: 'http' });
+
+export function capabilitiesOf(answers: ScaffoldAnswers): string[] {
+    return answers.transport === 'gateway' ? answers.capabilities : [];
+}
 
 // the three that make messageCreate fire
 const MESSAGE_CAPABILITIES = new Set(['guild-messages', 'message-text', 'direct-messages']);
@@ -20,29 +28,44 @@ const MESSAGE_CAPABILITIES = new Set(['guild-messages', 'message-text', 'direct-
 export interface TemplateContext {
     projectName: string;
     isGateway: boolean;
+    isEdge: boolean;
     transportPackage: string;
     intents: string[];
     partials: string[];
     hasMessages: boolean;
     token: string;
-    publicKey: string;
+    testingGuildIds: string;
     botColor: string;
     developerUsername: string;
-    pm: { run: string; isBun: boolean };
+    cliOnBun: boolean;
+    pm: { run: string; exec: string; isPnpm: boolean };
     engines: { node: string; bun: string };
 }
 
-const REQUIRED = ['directory', 'transport', 'token', 'botColor'] as const;
+function required<Key extends keyof Answers>(answers: Partial<Answers>, key: Key): Answers[Key] {
+    const answer = answers[key];
+    if (answer === undefined) {
+        const flag = STEPS.find((step) => step.key === key)?.flag.name ?? key;
+        throw new SeedcordTypeError(SeedcordErrorCode.CreateInvalidAnswer, [flag, 'No answer was collected.']);
+    }
+
+    return answer;
+}
 
 // runFlow either fills these or throws
 export function requireScaffoldAnswers(answers: Partial<Answers>): ScaffoldAnswers {
-    for (const key of REQUIRED) {
-        if (answers[key] === undefined) {
-            throw new SeedcordError(SeedcordErrorCode.CreateInvalidAnswer, [key, 'No answer was collected.']);
-        }
-    }
+    const shared: SharedAnswers = {
+        directory: required(answers, 'directory'),
+        token: required(answers, 'token'),
+        testingGuilds: required(answers, 'testingGuilds'),
+        botColor: required(answers, 'botColor'),
+        install: required(answers, 'install'),
+        git: required(answers, 'git')
+    };
 
-    return answers as ScaffoldAnswers;
+    return required(answers, 'transport') === 'gateway'
+        ? { ...shared, transport: 'gateway', capabilities: required(answers, 'capabilities') }
+        : { ...shared, transport: 'http', runtime: required(answers, 'runtime') };
 }
 
 export function buildContext(
@@ -50,20 +73,24 @@ export function buildContext(
     extras: { developerUsername: string; agent: AgentName }
 ): TemplateContext {
     const isGateway = answers.transport === 'gateway';
-    const capabilities = isGateway ? (answers.capabilities ?? []) : [];
+    const isEdge = answers.transport === 'http' && answers.runtime === 'edge';
+    const capabilities = capabilitiesOf(answers);
 
     return {
         projectName: basename(answers.directory),
         isGateway,
+        isEdge,
         transportPackage: isGateway ? '@seedcord/gateway' : '@seedcord/http',
         intents: isGateway ? intentsFor(capabilities) : [],
         partials: isGateway ? partialsFor(capabilities) : [],
         hasMessages: capabilities.some((id) => MESSAGE_CAPABILITIES.has(id)),
-        token: answers.token ?? '',
-        publicKey: answers.publicKey ?? '',
+        token: answers.token?.value ?? '',
+        testingGuildIds: answers.testingGuilds.join(','),
         botColor: answers.botColor,
         developerUsername: extras.developerUsername,
-        pm: { run: runPrefix(extras.agent), isBun: extras.agent === 'bun' },
+        // cloudflare's config loader throws on bun
+        cliOnBun: extras.agent === 'bun' && !isEdge,
+        pm: { run: runPrefix(extras.agent), exec: execPrefix(extras.agent), isPnpm: extras.agent === 'pnpm' },
         engines: ownPackage.engines
     };
 }

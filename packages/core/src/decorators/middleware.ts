@@ -62,7 +62,7 @@ export interface InteractionMiddlewareMetadata {
  * }
  * ```
  *
- * @throws A **SeedcordTypeError** If `priority` is not a finite number.
+ * @throws A **SeedcordTypeError** when `priority` is not a finite number.
  */
 export function RegisterInteractionMiddleware<
     const Kinds extends NonEmptyTuple<MiddlewareKind> = NonEmptyTuple<MiddlewareKind>
@@ -70,9 +70,12 @@ export function RegisterInteractionMiddleware<
     return function <TCtor extends AnyMiddlewareCtor>(ctor: AssertMiddlewareKinds<Kinds[number], TCtor>): void {
         const priority = Number(options.priority ?? 0);
         if (!Number.isFinite(priority))
-            throw new SeedcordTypeError(SeedcordErrorCode.DecoratorInvalidMiddlewarePriority);
+            throw new SeedcordTypeError(SeedcordErrorCode.DecoratorInvalidMiddlewarePriority, [
+                ctor.name,
+                String(options.priority)
+            ]);
         if (options.kinds?.length === 0)
-            throw new SeedcordTypeError(SeedcordErrorCode.DecoratorEmptyMiddlewareFilter, ['kinds']);
+            throw new SeedcordTypeError(SeedcordErrorCode.DecoratorEmptyMiddlewareFilter, [ctor.name, 'kinds']);
 
         const metadata: InteractionMiddlewareMetadata = {
             priority,

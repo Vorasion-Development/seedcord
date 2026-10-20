@@ -1,6 +1,7 @@
 import { ShutdownPhase, shutdownOf, StartupPhase } from '@seedcord/core/node/internal';
 import { SeedcordErrorCode } from '@seedcord/errors';
 import { LoggerChannelRegistry } from '@seedcord/logger';
+import { HostShutdown, HostStartup } from '@seedcord/types/internal';
 import { Events } from 'discord.js';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
@@ -8,8 +9,6 @@ import { Plugin } from '#src/Plugin';
 import { Seedcord } from '#src/Seedcord';
 
 import { testConfig } from './utils/test-config';
-
-import './utils/mock-env';
 
 import type { Client } from 'discord.js';
 
@@ -99,6 +98,31 @@ describe('Seedcord host', () => {
 
         expect(settled.map((result) => result.status)).toEqual(['rejected', 'rejected']);
         expect(configure).toHaveBeenCalledTimes(1);
+    });
+
+    it('disposes a plugin whose init() finishes after startup was aborted', async () => {
+        const { promise: initStarted, resolve: markInitStarted } = Promise.withResolvers<undefined>();
+        const { promise: initGate, resolve: finishInit } = Promise.withResolvers<undefined>();
+        const dispose = vi.fn(() => Promise.resolve());
+        class SlowConnect extends Plugin {
+            public async init(): Promise<void> {
+                markInitStarted(undefined);
+                await initGate;
+            }
+
+            public override dispose = dispose;
+        }
+        const seedcord = new Seedcord(testConfig({ healthCheck: false })).attach('db', SlowConnect);
+
+        // the steps DevSession.stop takes on r or q
+        const starting = seedcord.start().catch(() => undefined);
+        await initStarted;
+        seedcord[HostStartup].abort();
+        setTimeout(() => finishInit(undefined), 20);
+        await starting;
+        await seedcord[HostShutdown].run(0, false);
+
+        expect(dispose).toHaveBeenCalledOnce();
     });
 
     it('a start failure after login destroys the client', async () => {

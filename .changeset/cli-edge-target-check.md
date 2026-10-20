@@ -1,5 +1,6 @@
 ---
 'seedcord': minor
+'@seedcord/errors': minor
 ---
 
-A `wrangler.json`, `wrangler.jsonc` or `wrangler.toml` beside `seedcord.config.ts` now makes the CLI treat the bot as an edge bot. An edge bot's tsconfig must now set `"customConditions": ["workerd"]`. A stray `wrangler.jsonc` in a node bot's folder, or the condition without a wrangler config, now stops `seedcord build`, `codegen` and `dev` with an error that says which file to change.
+A `cloudflare.config.ts` beside `seedcord.config.ts` now makes the bot an edge bot. It needs `cf` and `@cloudflare/vite-plugin` installed, Node compat on, and `"customConditions": ["workerd"]` in its tsconfig, and the CLI loads it under Cloudflare's `workerd` conditions with `env` from `cloudflare:workers` filled from your local env files. A stray `cloudflare.config.ts` or `workerd` condition in a node bot stops the CLI with an error that points at it.

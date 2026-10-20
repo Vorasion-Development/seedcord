@@ -1,12 +1,8 @@
-import { resolve } from 'node:path';
-
 import { Seedcord } from '@seedcord/gateway';
 import { Mongoose } from '@seedcord/plugin-mongoose';
 import { GatewayIntentBits, Partials } from 'discord.js';
 import { Converters, Envapter } from 'envapt';
 import { Envapt } from 'envapt/legacy';
-
-Envapter.baseDir = resolve(import.meta.dirname, '..');
 
 export class Vars extends Envapter {
     @Envapt('MONGO_URI', { fallback: 'mongodb://localhost:27017/' })
@@ -33,16 +29,16 @@ export const seedcord = new Seedcord({
             partials: [Partials.GuildMember, Partials.User]
         },
         interactions: {
-            path: resolve(import.meta.dirname, './handlers'),
-            middlewares: resolve(import.meta.dirname, './handlers/middlewares')
+            path: './handlers',
+            middlewares: './handlers/middlewares'
         },
         commands: {
-            path: resolve(import.meta.dirname, './commands'),
+            path: './commands',
             guilds: Vars.commandGuilds
         },
         events: {
-            path: resolve(import.meta.dirname, './events'),
-            middlewares: resolve(import.meta.dirname, './events/middlewares')
+            path: './events',
+            middlewares: './events/middlewares'
         },
         emojis: {
             Confirm: 'confirmation_check',
@@ -54,7 +50,7 @@ export const seedcord = new Seedcord({
     },
     botColor: '#fe565a'
 }).attach('db', Mongoose, {
-    dir: resolve(import.meta.dirname, './services'),
+    dir: './services',
     uri: Vars.mongoUri,
     name: Vars.dbName
 });

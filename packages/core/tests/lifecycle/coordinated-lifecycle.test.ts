@@ -45,7 +45,7 @@ describe('CoordinatedStartup failure and guards', () => {
             startup.addTask(StartupPhase.Configuration, 'late', () => Promise.resolve());
             expect.fail('expected a throw');
         } catch (err) {
-            expect(isSeedcordError(err, undefined, SeedcordErrorCode.LifecycleAddAfterCompletion)).toBe(true);
+            expect(isSeedcordError(err, undefined, SeedcordErrorCode.LifecycleTaskChangeRejected)).toBe(true);
         }
     });
 
@@ -62,7 +62,7 @@ describe('CoordinatedStartup failure and guards', () => {
         });
 
         await startup.run();
-        expect(isSeedcordError(caught, undefined, SeedcordErrorCode.LifecycleAddDuringRun)).toBe(true);
+        expect(isSeedcordError(caught, undefined, SeedcordErrorCode.LifecycleTaskChangeRejected)).toBe(true);
     });
 
     it('times out a never-resolving task', async () => {
@@ -70,6 +70,40 @@ describe('CoordinatedStartup failure and guards', () => {
         startup.addTask(StartupPhase.Configuration, 'hang', () => new Promise<void>(() => undefined), 10);
 
         await expect(startup.run()).rejects.toThrow();
+    });
+
+    it('aborts the signal of a task that outlives its timeout', async () => {
+        const startup = new CoordinatedStartup();
+        let taskSignal: AbortSignal | undefined;
+        startup.addTask(
+            StartupPhase.Configuration,
+            'hang',
+            (signal) => {
+                taskSignal = signal;
+                return new Promise<void>(() => undefined);
+            },
+            10
+        );
+
+        await expect(startup.run()).rejects.toThrow();
+
+        expect(taskSignal?.aborted).toBe(true);
+    });
+
+    it('aborts the signal of a running task when startup is aborted', async () => {
+        const startup = new CoordinatedStartup();
+        const { promise: taskStarted, resolve: markStarted } = Promise.withResolvers<AbortSignal>();
+        startup.addTask(StartupPhase.Configuration, 'wait', (signal) => {
+            markStarted(signal);
+            return new Promise<void>((resolve) => signal.addEventListener('abort', () => resolve()));
+        });
+
+        const running = startup.run();
+        const signal = await taskStarted;
+        startup.abort();
+        await running;
+
+        expect(signal.aborted).toBe(true);
     });
 
     it('leaves a task rejection unlogged once the run is aborted', async () => {

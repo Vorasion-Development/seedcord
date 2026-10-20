@@ -23,41 +23,28 @@
 
 ## About
 
-`create-seedcord` scaffolds a new seedcord bot project.
+`create-seedcord` sets up a new seedcord bot. It asks a few questions, writes the project, and can install its dependencies and make the first git commit. You run it once, when you start a new bot.
 
-Until v1.0.0, minor versions can break.
+seedcord is pre-1.0, so a minor version can break your bot. Each release's changelog says what changed and how to update.
 
 ## Usage
 
 ```sh
 pnpm create seedcord my-bot
-npm create seedcord my-bot
-yarn create seedcord my-bot
 ```
 
-It asks where the project goes, how Discord reaches your bot, what the bot should react to, your bot token, your app public key on http, and an accent color. Then it writes the project, installs dependencies, formats, generates your command types, and makes the first commit. If a step after the write fails, you get a warning and the summary still prints.
+`npm create seedcord`, `yarn create seedcord`, and `bun create seedcord` work too, and the project uses that package manager.
 
-If you don't have the token or key yet, press Enter twice on its prompt to skip it. Fill it into `.env` before you start the bot.
+It asks whether your bot is a gateway or an http bot, where an http bot runs, what a gateway bot reacts to, your bot token, and the servers to test your commands in. The [first bot guide](https://seedcord.org/guide/first-bot) walks through each question.
 
-On Windows, run it from Windows Terminal. The prompts fall back to ASCII in `cmd.exe` making the boxes draw as `T`, `|`, and `o`.
-
-## Flags
-
-Every question has a flag. Pass them all to skip all questions. `--help` prints the list.
-
-npm forwards flags to the package only after a `--`:
+Every question has a flag, and `--help` prints them all. npm passes flags on only after a `--`:
 
 ```sh
 npm create seedcord my-bot -- --transport gateway --capabilities reactions
-pnpm create seedcord my-bot --transport gateway --capabilities reactions
 ```
-
-`--no-install` and `--no-git` turn off those two steps. `--no-token` and `--no-public-key` leave those keys empty without asking. `-v` prints the version and `-h` prints the flag list.
-
-With no terminal to ask on, it reads the flags alone. It prints the flag that would supply any answer you left out.
 
 ## What you get
 
-A TypeScript project holding one slash command, its handler, a sample event handler (if you picked `gateway`), `seedcord.config.ts`, eslint, prettier, and a `.env` listing every key the framework reads.
+A TypeScript project with one slash command, its handler, a sample plugin, `seedcord.config.ts`, ESLint, Prettier, and a `.env` for your token. A gateway bot also gets a sample event handler. An http bot on Cloudflare Workers also gets a `cloudflare.config.ts` and a `deploy` script.
 
-`pnpm dev` starts it with hot reload. On the http transport it also opens a cloudflared tunnel and sets it up, and Discord posts interactions to that URL.
+`pnpm dev` starts the bot with hot reload.
