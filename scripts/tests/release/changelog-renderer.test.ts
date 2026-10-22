@@ -97,16 +97,16 @@ describe('ChangelogRenderer contributor credit', () => {
         expect(line).toBe('- A thing changed. ([#311](https://github.com/seedcord/seedcord/pull/311))');
     });
 
-    it('drops the thanks when the contributor lookup fails', async () => {
+    it('rejects when the contributor lookup fails', async () => {
         const failing = new ChangelogRenderer({
             repo: 'seedcord/seedcord',
             subjectOf: (sha) => Promise.resolve(SUBJECTS.get(sha)),
             contributorsOf: () => Promise.reject(new Error('rate limited'))
         });
 
-        const line = await failing.releaseLine({ summary: 'A thing changed.', commit: 'aaa1111' });
-
-        expect(line).toBe('- A thing changed. ([#312](https://github.com/seedcord/seedcord/pull/312))');
+        await expect(failing.releaseLine({ summary: 'A thing changed.', commit: 'aaa1111' })).rejects.toThrow(
+            'rate limited'
+        );
     });
 
     it('looks up the contributors of a pull request once for every package it bumps', async () => {

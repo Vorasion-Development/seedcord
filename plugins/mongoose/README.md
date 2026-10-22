@@ -10,7 +10,7 @@
   <a href="https://seedcord.org">Website</a> ·
   <a href="https://seedcord.org/guide">Guide</a> ·
   <a href="https://seedcord.org/docs">Reference</a> ·
-  <a href="https://discord.gg/DzFxY58WXf">Discord</a>
+  <a href="https://seedcord.org/chat/">Discord</a>
 </div>
 
 <br />

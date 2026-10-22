@@ -15,10 +15,11 @@ describe('linkKind', () => {
         }
     );
 
-    it.each(['https://github.com/seedcord/seedcord', 'https://discord.gg/DzFxY58WXf'])(
-        'treats %s as external',
-        (href) => {
-            expect(linkKind(href)).toBe('external');
-        }
-    );
+    it.each([
+        'https://github.com/seedcord/seedcord',
+        'https://www.npmjs.com/org/seedcord',
+        'https://seedcord.org/chat/'
+    ])('treats %s as external', (href) => {
+        expect(linkKind(href)).toBe('external');
+    });
 });

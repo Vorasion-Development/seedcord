@@ -39,6 +39,6 @@ export const DOCS_URL = DOCS.url;
 export const REPO_URL = 'https://github.com/seedcord/seedcord';
 export const GITHUB_ORG_URL = 'https://github.com/seedcord';
 export const NPM_ORG_URL = 'https://www.npmjs.com/org/seedcord';
-export const DISCORD_URL = 'https://discord.gg/DzFxY58WXf';
+export const DISCORD_URL = HOME.at('chat/');
 export const AUTHOR_URL = 'https://materwelon.dev';
 export const AUTHOR_GITHUB_URL = 'https://github.com/materwelonDhruv';

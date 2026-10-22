@@ -57,7 +57,7 @@ export class ChangelogRenderer {
         const { contributorsOf, maintainers = [] } = this.config;
         if (contributorsOf === undefined) return '';
 
-        const contributors = await contributorsOf(pull).catch(() => []);
+        const contributors = await contributorsOf(pull);
         const credited = contributors.filter((login) => !maintainers.includes(login));
         if (credited.length === 0) return '';
 

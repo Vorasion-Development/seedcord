@@ -16,7 +16,7 @@ import { rethrowVitePluginError, VitePlugins } from './vitePlugins';
 
 import type { ModuleLoader, OpenModules } from '#core/modules/ModuleLoader';
 import type { RealPath } from '#core/project/realPath';
-import type { DefaultMode, ShellMode } from '#core/viteMode';
+import type { DefaultMode, ShellMode } from '#src/core/ShellMode';
 import type { CheckedConfig } from './ConfigValidator';
 import type { BuildTarget } from './detectTarget';
 import type {
@@ -69,9 +69,9 @@ export class ProjectLoader {
         const config = await this.resolveConfig(configModules, configPath, target, mode);
         const project = new Project(config, new ProjectFiles(config), configModules);
         assertPathsBundled(project);
+        await check?.(project);
         await assertNoHashPaths(project);
         await assertTargetMatchesTsconfig(project);
-        await check?.(project);
         const loaded = new LoadedConfig(config, project.files);
         return loaded.hasVitePlugins ? new LoadedConfig(config, project.files, stack.move()) : loaded;
     }

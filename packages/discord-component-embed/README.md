@@ -3,7 +3,7 @@
   <p>Show your own card when someone shares your link on Discord.</p>
   <a href="https://github.com/seedcord/seedcord/blob/next/packages/discord-component-embed/CHANGELOG.md">Changelog</a> ·
   <a href="https://seedcord.org/docs/packages/discord-component-embed/latest">Reference</a> ·
-  <a href="https://discord.gg/DzFxY58WXf">Discord</a>
+  <a href="https://seedcord.org/chat/">Discord</a>
 </div>
 
 <br />
