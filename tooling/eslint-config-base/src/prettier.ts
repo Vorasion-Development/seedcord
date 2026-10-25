@@ -13,6 +13,17 @@ export type PrettierConfig = Options & {
     tailwindPreserveDuplicates?: boolean;
 };
 
+export interface PrettierOverride {
+    /**
+     * Glob pattern to match files for this override.
+     */
+    files: string | string[];
+    /**
+     * Prettier options to apply for this override.
+     */
+    options: Options;
+}
+
 /**
  * Tailwind class-sorting options forwarded to `prettier-plugin-tailwindcss`.
  */
@@ -52,7 +63,7 @@ export interface CreatePrettierConfigOptions {
     /**
      * Per-glob option overrides, passed through to prettier's own `overrides` field.
      */
-    overrides?: PrettierConfig['overrides'];
+    overrides?: PrettierOverride[];
 }
 
 /**
