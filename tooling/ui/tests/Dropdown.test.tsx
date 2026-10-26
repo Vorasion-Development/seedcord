@@ -101,7 +101,7 @@ describe('Dropdown open/close', () => {
 });
 
 describe('Dropdown selection callback', () => {
-    it('fires onChange with the option value when an option is clicked', async () => {
+    it('calls onChange with the option value when an option is clicked', async () => {
         const user = userEvent.setup();
         const onChange = vi.fn();
         renderDropdown({ onChange });
@@ -190,7 +190,7 @@ describe('Dropdown groups', () => {
         expect(await screen.findByTestId('latest-badge')).toBeInTheDocument();
     });
 
-    it('fires onChange for an option in a later group', async () => {
+    it('calls onChange for an option in a later group', async () => {
         const user = userEvent.setup();
         const onChange = vi.fn();
         renderGroups(onChange);

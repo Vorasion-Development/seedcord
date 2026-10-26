@@ -359,9 +359,9 @@ export class EventDispatcher implements Initializeable, HmrAware {
             if (stopped) return;
 
             for (const entry of handlersToExecute) {
-                // marked spent before running so a rethrow can't re-fire it
+                // marked spent before running so a rethrow can't invoke it again
                 if (entry.frequency === 'once') {
-                    // a concurrent fire could have claimed it during the runMiddlewares await
+                    // another dispatch may have marked this handler during the runMiddlewares await
                     if (this.executedOnceHandlers.has(entry.ctor)) continue;
                     this.executedOnceHandlers.add(entry.ctor);
                 }

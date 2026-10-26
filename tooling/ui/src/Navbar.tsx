@@ -32,7 +32,7 @@ export function Navbar({ mark, center, actions, tabs, tabsClassName, className }
             if (height > 0) document.documentElement.style.setProperty('--nav-h', `${height}px`);
         };
 
-        // a webfont swapping in reflows these rows without firing a resize
+        // a webfont swapping in reflows these rows without a window resize event
         const observer = new ResizeObserver(measure);
         observer.observe(header);
         measure();

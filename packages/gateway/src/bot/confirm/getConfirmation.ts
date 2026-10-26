@@ -225,7 +225,7 @@ export async function getConfirmation(
         return false;
     }
 
-    // discord can expire the 3s ack window between the filter firing and this ack
+    // discord can expire the 3s ack window between the filter accepting the interaction and this ack
     await winner.deferUpdate().catch(() => undefined);
     const confirmed = winner.customId === CONFIRM_IDS.confirm;
     await settle(sender, message, confirmed ? options?.onConfirm : options?.onCancel);

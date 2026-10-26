@@ -25,7 +25,7 @@ type FocusedArms<Route extends keyof SlashRegistry, Ret> = {
  *
  * Pass the command route(s) from the generated registry as the generic, the same string(s) as
  * `@AutocompleteRoute`. Branch on the focused field with `this.match`, read already-entered sibling options
- * with `this.options`, and find which command fired with `this.route`.
+ * with `this.options`, and read the selected command's path from `this.route`.
  *
  * @typeParam Route - One or more route keys from {@link SlashRegistry}, e.g. `'search'` or `'search' | 'find'`.
  * @typeParam Cache - The interaction cache state. The command's contexts set it.
@@ -125,7 +125,7 @@ export abstract class AutocompleteHandler<
         );
     }
 
-    /** The firing command route, for a field whose completion differs per registered command. */
+    /** The selected command's path, such as `search/docs`, without the interaction-kind prefix. */
     protected get route(): Route {
         return slashRouteOf(this.event) as Route;
     }

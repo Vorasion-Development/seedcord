@@ -71,7 +71,7 @@ function useMeasuredHeight(): [number, (el: HTMLDivElement | null) => void] {
             return;
         }
         const observer = new ResizeObserver(() => setHeight(el.scrollHeight));
-        // ResizeObserver fires once on observe() to seed the first height
+        // ResizeObserver invokes its callback on observe() to seed the first height
         observer.observe(el);
         observerRef.current = observer;
     }, []);

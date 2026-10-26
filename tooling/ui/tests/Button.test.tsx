@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Button } from '#src/Button';
 
 describe('Button behavior', () => {
-    it('fires onClick when clicked', async () => {
+    it('calls onClick when clicked', async () => {
         const user = userEvent.setup();
         const onClick = vi.fn();
         render(<Button onClick={onClick}>Click</Button>);
@@ -14,7 +14,7 @@ describe('Button behavior', () => {
         expect(onClick).toHaveBeenCalledTimes(1);
     });
 
-    it('does not fire onClick when disabled', async () => {
+    it('does not call onClick when disabled', async () => {
         const user = userEvent.setup();
         const onClick = vi.fn();
         render(

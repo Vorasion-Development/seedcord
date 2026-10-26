@@ -10,7 +10,7 @@ import { TestNotice } from '#tests/utils/TestNotice';
 import type { Core } from '#interfaces/Core';
 import type { SubscriptionData } from '@seedcord/core';
 
-// the dispatcher supplies the per-fire context
+// the dispatcher supplies the per-dispatch context
 function handleEventFault(caught: unknown, eventName: string, handlerName: string, args: unknown, core: Core): void {
     boundary(caught, { eventName, handlerName, args, dispatch: new DispatchContext(`event:${eventName}`) }, core);
 }

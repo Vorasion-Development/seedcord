@@ -23,7 +23,7 @@ function createPayload(m: { reply: ReturnType<typeof vi.fn> }): ClientEvents[Eve
     return [m] as unknown as ClientEvents[Events.MessageCreate];
 }
 
-// a single-event middleware reads this.event as the concrete tuple and this.eventName as the fired name
+// a single-event middleware reads this.event as the concrete tuple and this.eventName as the current event name
 class SingleMw extends EventMiddleware<Events.MessageCreate> {
     async execute(): Promise<void> {
         await Promise.resolve();
@@ -78,7 +78,7 @@ class CatchallType extends EventMiddleware {
 void CatchallType;
 
 describe('EventMiddleware', () => {
-    it('threads the fired event name into the ctor', () => {
+    it('threads the current event name into the ctor', () => {
         const mw = new SingleMw(createPayload(fakeMessage()), core, dispatch, Events.MessageCreate);
         expect(mw.readName()).toBe(Events.MessageCreate);
     });
@@ -88,12 +88,12 @@ describe('EventMiddleware', () => {
         expect(mw.readEvent()).toHaveLength(1);
     });
 
-    it('exposes the fired name on a catchall middleware', () => {
+    it('exposes the current event name on a catchall middleware', () => {
         const mw = new CatchallMw(createPayload(fakeMessage()), core, dispatch, Events.MessageCreate);
         expect(mw.readName()).toBe(Events.MessageCreate);
     });
 
-    it('throws when the fired event name is unavailable', () => {
+    it('throws when the current event name is unavailable', () => {
         const mw = new SingleMw(createPayload(fakeMessage()), core, dispatch);
         expect(() => mw.readName()).toThrow(expect.objectContaining({ code: SeedcordErrorCode.EventNameUnavailable }));
     });

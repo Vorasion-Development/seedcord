@@ -99,7 +99,7 @@ describe('eventDispatched', () => {
     });
 
     withFire(
-        'publishes once per fire, naming every handler that ran and how it ended',
+        'publishes once per dispatch, naming every handler that ran and how it ended',
         async ({ testEnv, fireMessageCreate }) => {
             await testEnv.createFile(`${EVENTS_DIR}/Ok.ts`, OK);
             await testEnv.createFile(`${EVENTS_DIR}/Boom.ts`, BOOM);
@@ -154,7 +154,7 @@ describe('eventDispatched', () => {
         expect(starts).toHaveLength(1);
     });
 
-    it('stamps the same dispatchId on both keys for one fire', async ({ testEnv }) => {
+    it('stamps the same dispatchId on both keys for one dispatch', async ({ testEnv }) => {
         await testEnv.createFile(`${EVENTS_DIR}/Ok.ts`, OK);
 
         await using seedcord = new Seedcord(testConfig({ events: testEnv.resolvePath(EVENTS_DIR) }));

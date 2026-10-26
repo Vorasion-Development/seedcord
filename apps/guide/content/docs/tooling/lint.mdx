@@ -40,7 +40,7 @@ These read your handlers, commands, events, and subscribers. Some catch a class 
 | --- | --- |
 | `interaction-handler-missing-route` | a handler missing its route decorator. Its clicks reach the unhandled default |
 | `command-builder-missing-register-command` | a command missing `@RegisterCommand`, which keeps it from deploying to Discord |
-| `event-handler-missing-register-event` | an event handler missing `@RegisterEvent`, so it never fires. Gateway only |
+| `event-handler-missing-register-event` | an event handler missing `@RegisterEvent`, so it never runs. Gateway only |
 | `middleware-missing-register-decorator` | middleware missing `@Middleware`. It never runs on a request |
 | `subscriber-missing-decorators` | a subscriber missing `@Subscribe`, or a `WebhookLog` missing `@WebhookUrl` |
 | `no-raw-client-events` | a `client.on` listener, which skips the dispatcher and every middleware on it. Gateway only |

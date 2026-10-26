@@ -66,13 +66,13 @@ export abstract class UserContextMenuHandler<
         return resolved.members?.[targetId] ?? null;
     }
 
-    /** Which of the registered commands fired. */
+    /** The selected context-menu command's name, without the interaction-kind prefix. */
     protected get commandName(): Names {
         return this.event.data.name as Names;
     }
 
     /**
-     * Run the arm for whichever command fired. Use this only when the handler is registered for several
+     * Run the arm for the selected command. Use this only when the handler is registered for several
      * names.
      *
      * Provide one arm per registered name, keyed by the name Discord shows in the right-click menu. Each
@@ -125,13 +125,13 @@ export abstract class MessageContextMenuHandler<
         return resolved.messages[targetId] as APIMessage;
     }
 
-    /** Which of the registered commands fired. */
+    /** The selected context-menu command's name, without the interaction-kind prefix. */
     protected get commandName(): Names {
         return this.event.data.name as Names;
     }
 
     /**
-     * Run the arm for whichever command fired. Use this only when the handler is registered for several
+     * Run the arm for the selected command. Use this only when the handler is registered for several
      * names.
      *
      * Provide one arm per registered name, keyed by the name Discord shows in the right-click menu. Each

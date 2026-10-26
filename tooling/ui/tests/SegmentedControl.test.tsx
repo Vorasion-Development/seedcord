@@ -63,7 +63,7 @@ describe('SegmentedControl radio-group ARIA', () => {
 });
 
 describe('SegmentedControl selection callback', () => {
-    it('fires onChange with the clicked option value', async () => {
+    it('calls onChange with the clicked option value', async () => {
         const user = userEvent.setup();
         const spy = vi.fn();
         render(<Harness onChangeSpy={spy} />);
@@ -124,7 +124,7 @@ describe('SegmentedControl segment interactivity', () => {
         }
     });
 
-    it('still fires onChange when the same radio is clicked twice (no swallow)', async () => {
+    it('still calls onChange when the same radio is clicked twice (no swallow)', async () => {
         const user = userEvent.setup();
         const spy = vi.fn();
         render(<Harness onChangeSpy={spy} />);
@@ -150,7 +150,7 @@ describe('SegmentedControl disabled option', () => {
         expect(screen.getByRole('radio', { name: 'List' })).not.toBeDisabled();
     });
 
-    it('does not fire onChange when a disabled option is clicked', async () => {
+    it('does not call onChange when a disabled option is clicked', async () => {
         const user = userEvent.setup();
         const spy = vi.fn();
         render(<SegmentedControl aria-label="View mode" options={WITH_DISABLED} value="list" onChange={spy} />);

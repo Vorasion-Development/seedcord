@@ -45,7 +45,7 @@ That stops one [event dispatch](/events#several-handlers-for-one-event). The nex
 
 You write the events twice, once in `{ events }` and once in the generic on [`EventMiddleware`](ref:gateway/EventMiddleware). If the two differ, the decorator line fails to compile. `SkipMuted` lists one event, so [`this.event`](ref:gateway/EventMiddleware.event) is that event's payload.
 
-With several events, the payload could be any of them, so `this.event` is `never`. [`this.eventName`](ref:gateway/EventMiddleware.eventName) returns the event that fired, which is enough for work that doesn't read the payload, like counting.
+With several events, the payload could be any of them, so `this.event` is `never`. [`this.eventName`](ref:gateway/EventMiddleware.eventName) returns the current event's name, which is enough for work that doesn't read the payload, like counting.
 
 ```ts twoslash title="src/events/middlewares/CountMessages.ts"
 import {
@@ -64,7 +64,7 @@ export class CountMessages extends EventMiddleware<
     public async execute(): Promise<void> {
         const name = this.eventName;
         //    ^?
-        this.logger.debug(`${name} fired`);
+        this.logger.debug(`Received ${name}`);
     }
 }
 ```
@@ -126,7 +126,7 @@ export class Locale extends EventMiddleware<Events.MessageCreate> {
 }
 ```
 
-You declare the key and read it back the same way you do on [an interaction dispatch](/checks/dispatch-context). An interaction's bag has one handler reading it. An event's bag is shared by every handler registered for that event. On an event, `routeId` reads `event:<name>`. The bag lasts until every handler for that event has finished and every middleware's `after()` has run. The next time the event fires, it gets a new, empty bag.
+You declare the key and read it back the same way you do on [an interaction dispatch](/checks/dispatch-context). An interaction's bag has one handler reading it. An event's bag is shared by every handler registered for that event. On an event, `routeId` reads `event:<name>`. The bag lasts until every handler for that event has finished and every middleware's `after()` has run. The next event dispatch gets a new, empty bag.
 
 ## After the event
 

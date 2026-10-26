@@ -52,7 +52,7 @@ export abstract class EventHandler<in out Names extends ValidNonInteractionKeys>
     declare protected readonly event: SingleEventPayload<Names>;
 
     /**
-     * Run the arm for whichever event fired. Use this only when the handler is registered for several
+     * Run the arm for the current event. Use this only when the handler is registered for several
      * events. A single-event handler reads `this.event` directly. On a multi-event handler `this.event` is
      * `never`, so match is the only way to read the payload.
      *

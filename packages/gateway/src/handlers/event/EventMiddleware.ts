@@ -35,7 +35,7 @@ export abstract class EventMiddleware<
     declare protected readonly event: SingleEventPayload<EventName>;
 
     /**
-     * The event that fired this middleware. Read it on a catchall or multi-event middleware, where `this.event`
+     * The name of the event being processed. Read it on a catchall or multi-event middleware, where `this.event`
      * is `never`, to do work that does not depend on the payload shape. A single-event middleware reads
      * `this.event` directly and does not need this.
      */

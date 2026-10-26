@@ -142,7 +142,7 @@ class Siblings extends AutocompleteHandler<'search'> {
 }
 void Siblings;
 
-// this.route is the firing command, typed as the registered union
+// this.route is the selected command, typed as the registered union
 class RouteTyped extends AutocompleteHandler<'search' | 'find'> {
     async execute(): Promise<void> {
         expectTypeOf(this.route).toEqualTypeOf<'search' | 'find'>();
@@ -164,7 +164,7 @@ class MultiCommand extends AutocompleteHandler<'search' | 'find'> {
 }
 void MultiCommand;
 
-// the sibling view across commands is the union of their options, an option absent on the firing command reads null
+// the sibling view across commands is the union of their options, an option absent on the selected command reads null
 class UnionSiblings extends AutocompleteHandler<'search' | 'find'> {
     async execute(): Promise<void> {
         expectTypeOf(this.options.getInteger('limit')).toEqualTypeOf<number | null>();

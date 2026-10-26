@@ -22,7 +22,7 @@ export function capabilitiesOf(answers: ScaffoldAnswers): string[] {
     return answers.transport === 'gateway' ? answers.capabilities : [];
 }
 
-// the three that make messageCreate fire
+// capabilities that require receiving messageCreate events
 const MESSAGE_CAPABILITIES = new Set(['guild-messages', 'message-text', 'direct-messages']);
 
 export interface TemplateContext {

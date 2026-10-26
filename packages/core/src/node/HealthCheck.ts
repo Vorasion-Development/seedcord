@@ -100,7 +100,7 @@ export class HealthCheck {
     public stop(): Promise<void> {
         const server = this.server;
         // close() on a non-listening server invokes its callback with ERR_SERVER_NOT_RUNNING and
-        // never fires 'close', so without this guard the promise would hang the shutdown phase.
+        // never emits 'close', so without this guard the promise would hang the shutdown phase.
         if (!server?.listening) return Promise.resolve();
 
         return new Promise((resolve, reject) => {

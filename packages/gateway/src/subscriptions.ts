@@ -12,11 +12,11 @@ declare module '@seedcord/core/internal' {
             [Name in keyof ClientEvents]: { dispatchId: string; name: Name; args: ClientEvents[Name] };
         }[keyof ClientEvents];
         /**
-         * Triggered once an event's handlers settle, pairing with `eventDispatching`. A fire that runs no
-         * handler triggers neither.
+         * Published once an event's handlers settle, pairing with `eventDispatching`. When no handlers
+         * are registered, neither key is published.
          */
         eventDispatched: {
-            /** The same id `eventDispatching` published for this fire. */
+            /** The same id `eventDispatching` published for this dispatch. */
             dispatchId: string;
             name: keyof ClientEvents;
             /** How the middleware chain ended. A chain that refused the event leaves `handlers` empty. */

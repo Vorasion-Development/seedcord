@@ -99,7 +99,7 @@ describe('SlashHandler options and match', () => {
         expect(seen).toBe('spam');
     });
 
-    it('dispatches the arm for the firing route with its own typed options', async () => {
+    it('dispatches the arm for the selected route with its own typed options', async () => {
         class Mod extends SlashHandler<'hbBan' | 'hbKick'> {
             async execute(): Promise<void> {}
             run(): Promise<string> {
@@ -171,7 +171,7 @@ describe('AutocompleteHandler focused, match, options, route', () => {
         expect(options.body).toEqual({ type: 8, data: { choices: [{ name: 'par', value: 'par' }] } });
     });
 
-    it('reads entered siblings and the firing route', async () => {
+    it('reads entered siblings and the selected route', async () => {
         let sibling: number | null = null;
         let route = '';
         class Search extends AutocompleteHandler<'hbSearch'> {

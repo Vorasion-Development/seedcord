@@ -141,9 +141,9 @@ export enum SeedcordErrorCode {
     CustomIdWireTooLong = 1606,
     /** A component handler is missing the route decorator that matches its base. */
     CustomIdHandlerRouteMissing = 1607,
-    /** A handler's `match()` has no arm for the route, field, event, or command that fired. */
+    /** A handler's `match()` has no arm for the current route, field, event, or command. */
     MatchArmMissing = 1608,
-    /** An event handler or middleware read the fired event's name but was constructed without one. */
+    /** An event handler or middleware read the event name but was constructed without one. */
     EventNameUnavailable = 1609,
     /** Discord sent an autocomplete payload with no focused option. */
     AutocompleteNoFocusedOption = 1610,

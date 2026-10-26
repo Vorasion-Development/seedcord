@@ -42,7 +42,7 @@ const withBoot = it.extend<{ boot: Boot }>({
     }
 });
 
-describe('the per-fire event context', () => {
+describe('the per-dispatch event context', () => {
     beforeEach(() => {
         (globalThis as { fireCalls?: string[] }).fireCalls = [];
     });
@@ -51,7 +51,7 @@ describe('the per-fire event context', () => {
         vi.clearAllMocks();
     });
 
-    withBoot('shares one context between the chain and every handler of a fire', async ({ boot }) => {
+    withBoot('shares one context between the chain and every handler in a dispatch', async ({ boot }) => {
         const events = await boot(
             `
             import { EventHandler, RegisterEvent } from '${seedcordPath}';
@@ -163,7 +163,7 @@ describe('the per-fire event context', () => {
         ]);
     });
 
-    withBoot('leaves the handler list empty when the chain stops the fire', async ({ boot }) => {
+    withBoot('leaves the handler list empty when the chain stops the dispatch', async ({ boot }) => {
         const events = await boot(
             `
             import { EventHandler, RegisterEvent } from '${seedcordPath}';
@@ -190,7 +190,7 @@ describe('the per-fire event context', () => {
             @RegisterEventMiddleware({ priority: 2 })
             export class Stops extends EventMiddleware {
                 public async execute() {
-                    throw new Silence('stop the fire');
+                    throw new Silence('stop the dispatch');
                 }
             }
             `
@@ -258,7 +258,7 @@ describe('the per-fire event context', () => {
             @RegisterEventMiddleware()
             export class Stops extends EventMiddleware {
                 public async execute() {
-                    throw new Silence('stop the fire');
+                    throw new Silence('stop the dispatch');
                 }
                 public override async after(result) {
                     globalThis.fireCalls.push('Stops:' + result.outcome);
@@ -272,7 +272,7 @@ describe('the per-fire event context', () => {
         expect(fireCalls()).toEqual(['Stops:refused']);
     });
 
-    withBoot('stops the fire when a middleware constructor throws', async ({ boot }) => {
+    withBoot('stops the dispatch when a middleware constructor throws', async ({ boot }) => {
         const events = await boot(
             `
             import { EventHandler, RegisterEvent } from '${seedcordPath}';

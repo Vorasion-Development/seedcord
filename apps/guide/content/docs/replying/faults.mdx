@@ -153,7 +153,7 @@ seedcord registers an `unhandledRejection` and an `uncaughtException` listener w
 
 {/* prettier-ignore-end */}
 
-Both fire outside any interaction, so nobody sees a reply. When your application registers its own pair, set `errors.catchProcessErrors` to `false`, which [Configuring](/replying/error-behavior) shows in a real config.
+Both listeners run outside any interaction, so nobody sees a reply. When your application registers its own pair, set `errors.catchProcessErrors` to `false`, which [Configuring](/replying/error-behavior) shows in a real config.
 
 <Callout type="transport" only="http">
 

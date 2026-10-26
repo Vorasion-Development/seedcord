@@ -6,7 +6,7 @@ describe('MemoryRateLimiter concurrent charges', () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());
 
-    it('admits exactly limit charges when many fire in one frozen tick', async () => {
+    it('admits exactly limit charges when many requests arrive in one frozen tick', async () => {
         const limiter = new MemoryRateLimiter();
         const window = { windowMs: 1000, limit: 3 };
 

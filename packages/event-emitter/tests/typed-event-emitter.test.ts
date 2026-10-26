@@ -41,7 +41,7 @@ describe('TypedEventEmitter core', () => {
         expect(after).not.toHaveBeenCalled();
     });
 
-    it('once fires only on the first emit', () => {
+    it('once listener runs only on the first emit', () => {
         const ee = new TypedEventEmitter<Events>();
         const fn = vi.fn();
         ee.once('ping', fn);
@@ -60,7 +60,7 @@ describe('TypedEventEmitter core', () => {
         expect(fn).not.toHaveBeenCalled();
     });
 
-    it('off removes a once listener by its original reference before it fires', () => {
+    it('off removes a once listener by its original reference before it runs', () => {
         const ee = new TypedEventEmitter<Events>();
         const fn = vi.fn();
         ee.once('ping', fn);
@@ -125,7 +125,7 @@ describe('TypedEventEmitter emit-time mutation', () => {
         expect(count).toBe(1);
     });
 
-    it('a sibling once fires once when a re-entrant emit drains it mid-snapshot', () => {
+    it('a sibling once listener runs once when a re-entrant emit drains it mid-snapshot', () => {
         const ee = new TypedEventEmitter<Events>();
         const b = vi.fn();
         ee.once('ping', (n) => {
@@ -160,7 +160,7 @@ describe('TypedEventEmitter introspection', () => {
         expect(ee.eventNames()).toContain('ping');
     });
 
-    it('prunes the event after a lone once listener fires', () => {
+    it('prunes the event after a lone once listener runs', () => {
         const ee = new TypedEventEmitter<Events>();
         ee.once('ping', vi.fn());
         ee.emit('ping', 1);

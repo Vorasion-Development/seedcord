@@ -377,7 +377,7 @@ class RejectsEventGateHandlerFor extends EventHandler<Events.GuildMemberAdd> {
 }
 void RejectsEventGateHandlerFor;
 
-// @ts-expect-error the handler can fire messageUpdate, which the gate does not cover
+// @ts-expect-error the handler can process messageUpdate, which the gate does not cover
 @Gated(MessageGate)
 class RejectsNarrowEventGateWider extends EventHandler<Events.MessageCreate | Events.MessageUpdate> {
     async execute(): Promise<void> {

@@ -84,7 +84,7 @@ describe('Popover portal vs inline render', () => {
 });
 
 describe('Popover controlled vs uncontrolled', () => {
-    it('controlled: open is driven by parent state and onOpenChange fires', async () => {
+    it('controlled: open is driven by parent state and onOpenChange is called', async () => {
         const user = userEvent.setup();
         const changes: boolean[] = [];
         function Controlled(): ReactElement {

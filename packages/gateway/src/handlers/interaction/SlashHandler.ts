@@ -63,7 +63,7 @@ export abstract class SlashHandler<
     }
 
     /**
-     * Run the arm for whichever command fired. Use this only when the handler is registered for several
+     * Run the arm for the selected command. Use this only when the handler is registered for several
      * routes.
      *
      * Provide one arm per registered route, keyed by its route string, and each arm receives that route's

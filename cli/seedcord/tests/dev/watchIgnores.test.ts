@@ -75,7 +75,7 @@ async function watchProject(root: string, botRoot = root): Promise<WatchedProjec
             ]
         })
     );
-    // chokidar's ready can fire before a plugin hook can listen for it
+    // chokidar's ready can be emitted before a plugin hook can listen for it
     const { watcher } = server;
     await vi.waitFor(() => expect(watcher.getWatched()[join(root, 'src', 'logs')]).toContain('format.ts'), {
         timeout: WATCH_TIMEOUT_MS
