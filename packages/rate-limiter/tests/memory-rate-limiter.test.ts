@@ -73,7 +73,7 @@ describe('MemoryRateLimiter', () => {
         await limiter.charge('user', { windowMs: 1000 });
         expect(limiter.size).toBe(1);
 
-        // setSystemTime moves the clock without firing any timer, so eviction must come from access alone
+        // setSystemTime moves the clock without running timer callbacks, so eviction must come from access alone
         vi.setSystemTime(Date.now() + 60_001);
         await limiter.peek('other', { windowMs: 1000 });
 

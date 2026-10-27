@@ -67,7 +67,7 @@ class Menu extends UserContextMenuHandler<'View Profile' | 'Say Hello'> {
     }
 
     public readName(): 'View Profile' | 'Say Hello' {
-        return this.commandName;
+        return this.route;
     }
 }
 
@@ -123,7 +123,7 @@ class UnknownArm extends UserContextMenuHandler<'View Profile'> {
 void UnknownArm;
 
 describe('context menu match', () => {
-    it('runs the arm for the command that fired', async () => {
+    it('runs the arm for the selected command', async () => {
         await expect(new Menu(userMenu('View Profile'), core, dispatch).run()).resolves.toBe('profile');
         await expect(new Menu(userMenu('Say Hello'), core, dispatch).run()).resolves.toBe('hello');
     });
@@ -132,7 +132,7 @@ describe('context menu match', () => {
         await expect(new Tools(messageMenu('Pin Message'), core, dispatch).run()).resolves.toBe('pinned msg1');
     });
 
-    it('throws when the fired command has no arm', async () => {
+    it('throws when the selected command has no arm', async () => {
         let caught: unknown;
         try {
             await new Menu(userMenu('Say Hello'), core, dispatch).runPartial();
@@ -154,7 +154,7 @@ describe('context menu match', () => {
         expect(isSeedcordError(caught, 'SeedcordTypeError', SeedcordErrorCode.MatchArmMissing)).toBe(true);
     });
 
-    it('reads the fired command name without an arm', () => {
+    it('reads the selected command name without an arm', () => {
         expect(new Menu(userMenu('Say Hello'), core, dispatch).readName()).toBe('Say Hello');
     });
 });

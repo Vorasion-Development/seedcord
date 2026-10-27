@@ -54,7 +54,7 @@ export class EditLog extends EventHandler<Events.MessageUpdate> {
 }
 ```
 
-If the content didn't change, `EditLog` returns early. discord.js also fires `messageUpdate` when an embed loads on a message.
+If the content didn't change, `EditLog` returns early. discord.js also emits `messageUpdate` when an embed loads on a message.
 
 `EditLog` only writes a log line. To respond in Discord, you use the objects in `this.event`, like `after.reply(...)` on a message. An event handler doesn't have `this.reply`, because Discord isn't waiting for a reply to an event.
 
@@ -102,7 +102,7 @@ If you created your bot with [`create-seedcord`](/first-bot), it asked what your
 
 ## Running once
 
-Some work belongs to the first time an event fires, like logging which account your bot connected as. The tuple takes an options object as its second entry. Set `frequency: 'once'` to run the handler only the first time the event fires. It won't run again until your bot restarts.
+Some work belongs to the first time you receive an event, like logging which account your bot connected as. The tuple takes an options object as its second entry. Set `frequency: 'once'` to run the handler only for the first occurrence. It won't run again until your bot restarts.
 
 ```ts twoslash title="src/events/Boot.ts"
 import { EventHandler, RegisterEvent } from '@seedcord/gateway';
@@ -130,10 +130,10 @@ If you forget `@RegisterEvent` on a handler class, that handler never runs. seed
 
 Several handlers can register the same event, so a welcome message and a join log can stay in separate files. They run one after another, in the order seedcord loaded their files. If one of them throws, the rest still run. [Throwing](/replying/throwing) covers what seedcord does with the error.
 
-One event firing, with every handler registered for it, is an _event dispatch_. The [event middleware](/events/middleware) for that event runs once per event dispatch, ahead of all of those handlers. Each event dispatch runs in this order.
+Processing one event with every handler registered for it is an _event dispatch_. The [event middleware](/events/middleware) for that event runs once per event dispatch, ahead of all of those handlers. Each event dispatch runs in this order.
 
 ```txt output
-an event fires
+discord.js emits an event
 │
 ├─ 1. seedcord lists the event's handlers      leaves out a once handler that already ran
 ├─ 2. each event middleware's execute()        lowest priority first

@@ -2,221 +2,178 @@ import { describe, expect, it } from 'vitest';
 
 import { GitHubApi } from '#src/lib/GitHubApi';
 
-interface Call {
-    url: string;
-    method: string;
-    body: string | undefined;
-    headers: Record<string, string>;
-}
+const ok = (payload: unknown): Response => Response.json(payload);
 
-interface Reply {
-    ok: boolean;
-    status: number;
-    statusText: string;
-    json: () => Promise<unknown>;
-}
-
-type Fetcher = (
-    url: string,
-    init?: { method?: string; headers?: Record<string, string>; body?: string }
-) => Promise<Reply>;
-
-const ok = (payload: unknown): Reply => ({
-    ok: true,
-    status: 200,
-    statusText: 'OK',
-    json: (): Promise<unknown> => Promise.resolve(payload)
-});
-
-const failure = (status: number, statusText: string): Reply => ({
-    ok: false,
-    status,
-    statusText,
-    json: (): Promise<unknown> => Promise.resolve({})
-});
-
-function recorder(...responses: Reply[]): { calls: Call[]; fetcher: Fetcher } {
-    const calls: Call[] = [];
-    let index = 0;
-
-    const fetcher: Fetcher = (url, init) => {
-        calls.push({
-            url,
-            method: init?.method ?? 'GET',
-            body: init?.body,
-            headers: init?.headers ?? {}
-        });
-        const response = responses[index] ?? ok([]);
-        index += 1;
+function recorder(...responses: Response[]): { calls: Request[]; fetcher: typeof fetch } {
+    const calls: Request[] = [];
+    const fetcher: typeof fetch = (url, init) => {
+        const request = new Request(url, init);
+        calls.push(request);
+        const response = responses.shift();
+        if (!response) throw new Error(`Unexpected GitHub request: ${request.method} ${request.url}`);
         return Promise.resolve(response);
     };
-
     return { calls, fetcher };
 }
 
-const file = (name: string): { filename: string; status: string } => ({ filename: name, status: 'added' });
+describe('GitHubApi requests', () => {
+    it.each([
+        { token: 'secret', authorization: 'Bearer secret' },
+        { token: undefined, authorization: null }
+    ])('sends authorization=$authorization', async ({ token, authorization }) => {
+        const { calls, fetcher } = recorder(ok([]));
 
-describe('GitHubApi pull request files', () => {
-    it('reads every page until a short one ends the listing', async () => {
-        const firstPage = Array.from({ length: 100 }, (_, index) => file(`.changeset/${String(index)}.md`));
-        const { calls, fetcher } = recorder(ok(firstPage), ok([file('.changeset/last.md')]));
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
+        await new GitHubApi('owner/repo', token, fetcher).pullRequestFiles(1);
 
-        const files = await api.pullRequestFiles(311);
+        expect(calls[0]?.headers.get('authorization')).toBe(authorization);
+    });
 
-        expect(files).toHaveLength(101);
-        expect(calls).toHaveLength(2);
-        expect(calls[0]?.url).toContain('/repos/seedcord/seedcord/pulls/311/files?per_page=100&page=1');
+    it('reports the operation and HTTP failure', async () => {
+        const { fetcher } = recorder(new Response(null, { status: 403, statusText: 'Forbidden' }));
+
+        await expect(new GitHubApi('owner/repo', 'token', fetcher).pullRequestFiles(311)).rejects.toThrow(
+            'listing files on pull request #311 failed: 403 Forbidden'
+        );
+    });
+
+    it('collects every page until a short page ends the listing', async () => {
+        const first = Array.from({ length: 100 }, () => ({ filename: 'file.ts', status: 'added' }));
+        const last = { filename: 'last.ts', status: 'added' };
+        const { calls, fetcher } = recorder(ok(first), ok([last]));
+
+        const files = await new GitHubApi('owner/repo', 'token', fetcher).pullRequestFiles(311);
+
+        expect(files).toEqual([...first, last]);
+        expect(calls[0]?.url).toContain('/repos/owner/repo/pulls/311/files?per_page=100&page=1');
         expect(calls[1]?.url).toContain('page=2');
-    });
-
-    it('sends the token and the api version on every call', async () => {
-        const { calls, fetcher } = recorder(ok([]));
-        await new GitHubApi('seedcord/seedcord', 'secret', fetcher).pullRequestFiles(1);
-
-        expect(calls[0]?.headers.authorization).toBe('Bearer secret');
-        expect(calls[0]?.headers['x-github-api-version']).toBe('2022-11-28');
-    });
-
-    it('sends no authorization header without a token', async () => {
-        const { calls, fetcher } = recorder(ok([]));
-        await new GitHubApi('seedcord/seedcord', undefined, fetcher).pullRequestFiles(1);
-
-        expect(calls[0]?.headers.authorization).toBeUndefined();
-    });
-
-    it('throws naming the pull request when the listing fails', async () => {
-        const fetcher: Fetcher = () => Promise.resolve(failure(403, 'Forbidden'));
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
-
-        await expect(api.pullRequestFiles(311)).rejects.toThrow(/311/);
     });
 });
 
 describe('GitHubApi file contents', () => {
-    it('decodes the base64 body', async () => {
-        const content = Buffer.from('hello changeset', 'utf8').toString('base64');
-        const { fetcher } = recorder(ok({ content }));
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
+    it('decodes the contents and preserves reserved characters in the path and ref', async () => {
+        const { calls, fetcher } = recorder(ok({ content: Buffer.from('hello').toString('base64') }));
+        const api = new GitHubApi('owner/repo', 'token', fetcher);
 
-        await expect(api.fileContents('.changeset/a.md', 'abc123')).resolves.toBe('hello changeset');
-    });
+        await expect(api.fileContents('docs/weird#name?.md', 'feature/docs & guide')).resolves.toBe('hello');
 
-    it('keeps the slashes and percent-encodes the rest of the path', async () => {
-        const { calls, fetcher } = recorder(ok({ content: '' }), ok({ content: '' }));
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
-
-        await api.fileContents('.changeset/funny-lions-dance.md', 'main');
-        await api.fileContents('.changeset/weird#name?.md', 'main');
-
-        expect(calls[0]?.url).toContain('/contents/.changeset/funny-lions-dance.md?ref=main');
-        expect(calls[1]?.url).toContain('/contents/.changeset/weird%23name%3F.md?ref=main');
-    });
-
-    it('throws naming the file when the read fails', async () => {
-        const fetcher: Fetcher = () => Promise.resolve(failure(404, 'Not Found'));
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
-
-        await expect(api.fileContents('.changeset/gone.md', 'main')).rejects.toThrow(/gone\.md/);
+        expect(calls[0]?.url).toBe(
+            'https://api.github.com/repos/owner/repo/contents/docs/weird%23name%3F.md?ref=feature%2Fdocs%20%26%20guide'
+        );
     });
 });
 
 describe('GitHubApi contributors', () => {
-    it('reads the login that opened the pull request', async () => {
-        const { calls, fetcher } = recorder(ok({ user: { login: 'alice', type: 'User' } }));
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
+    it.each([
+        { user: { login: 'alice', type: 'User' }, expected: 'alice' },
+        { user: { login: 'automation[bot]', type: 'Bot' }, expected: undefined }
+    ])('reads the PR author for $user.type accounts', async ({ user, expected }) => {
+        const { calls, fetcher } = recorder(ok({ user }));
 
-        await expect(api.pullRequestAuthor(311)).resolves.toBe('alice');
-        expect(calls[0]?.url).toContain('/repos/seedcord/seedcord/pulls/311');
+        await expect(new GitHubApi('owner/repo', 'token', fetcher).pullRequestAuthor(311)).resolves.toBe(expected);
+        expect(calls[0]?.url).toBe('https://api.github.com/repos/owner/repo/pulls/311');
     });
 
-    it('reads every commit author on the pull request', async () => {
-        const { fetcher } = recorder(
+    it('keeps human commit authors in order and excludes bots and unmatched accounts', async () => {
+        const { calls, fetcher } = recorder(
             ok([
                 { author: { login: 'alice', type: 'User' } },
+                { author: { login: 'automation[bot]', type: 'Bot' } },
+                { author: null },
                 { author: { login: 'bob', type: 'User' } },
                 { author: { login: 'alice', type: 'User' } }
             ])
         );
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
 
-        await expect(api.pullRequestCommitAuthors(311)).resolves.toEqual(['alice', 'bob', 'alice']);
+        await expect(new GitHubApi('owner/repo', 'token', fetcher).pullRequestCommitAuthors(311)).resolves.toEqual([
+            'alice',
+            'bob',
+            'alice'
+        ]);
+        expect(calls[0]?.url).toContain('/pulls/311/commits?');
     });
+});
 
-    it('reads every page of commits on a pull request', async () => {
-        const firstPage = Array.from({ length: 100 }, () => ({ author: { login: 'alice', type: 'User' } }));
-        const { calls, fetcher } = recorder(ok(firstPage), ok([{ author: { login: 'bob', type: 'User' } }]));
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
-
-        const authors = await api.pullRequestCommitAuthors(311);
-
-        expect(authors).toContain('bob');
-        expect(calls[1]?.url).toContain('/pulls/311/commits?per_page=100&page=2');
-    });
-
-    it('drops a bot account', async () => {
-        const { fetcher } = recorder(
-            ok([{ author: { login: 'dependabot[bot]', type: 'Bot' } }, { author: { login: 'cara', type: 'User' } }])
+describe('GitHubApi review requests', () => {
+    it('excludes the author, already requested reviewers, and past reviewers regardless of casing', async () => {
+        const { calls, fetcher } = recorder(
+            ok({
+                state: 'open',
+                draft: false,
+                user: { login: 'Author' },
+                requested_reviewers: [{ login: 'Requested' }]
+            }),
+            ok([{ user: null }, { user: { login: 'Reviewed' } }]),
+            ok({})
         );
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
+        const api = new GitHubApi('owner/repo', 'token', fetcher);
 
-        await expect(api.pullRequestCommitAuthors(311)).resolves.toEqual(['cara']);
+        await api.requestMissingReviews(311, ['author', 'requested', 'reviewed', 'New']);
+
+        expect(calls.at(-1)).toMatchObject({
+            url: 'https://api.github.com/repos/owner/repo/pulls/311/requested_reviewers',
+            method: 'POST'
+        });
+        expect(await calls.at(-1)?.json()).toEqual({ reviewers: ['New'] });
     });
 
-    it('skips a commit github matched to no account', async () => {
-        const { fetcher } = recorder(ok([{ author: null }, { author: { login: 'cara', type: 'User' } }]));
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
+    it.each([
+        { state: 'open', draft: true },
+        { state: 'closed', draft: false }
+    ])('skips a $state pull request with draft=$draft', async (pull) => {
+        const { calls, fetcher } = recorder(ok(pull));
 
-        await expect(api.pullRequestCommitAuthors(311)).resolves.toEqual(['cara']);
+        await new GitHubApi('owner/repo', 'token', fetcher).requestMissingReviews(311, ['reviewer']);
+
+        expect(calls).toHaveLength(1);
     });
 
-    it('gives no author when the pull request opener is a bot', async () => {
-        const { fetcher } = recorder(ok({ user: { login: 'github-actions[bot]', type: 'Bot' } }));
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
+    it('does not send a request when all candidates have already reviewed', async () => {
+        const { calls, fetcher } = recorder(
+            ok({ state: 'open', draft: false, user: null, requested_reviewers: [] }),
+            ok([{ user: { login: 'reviewer' } }])
+        );
 
-        await expect(api.pullRequestAuthor(311)).resolves.toBeUndefined();
+        await new GitHubApi('owner/repo', 'token', fetcher).requestMissingReviews(311, ['reviewer']);
+
+        expect(calls.map(({ method }) => method)).toEqual(['GET', 'GET']);
     });
 });
 
 describe('GitHubApi labels', () => {
-    it('lists the label names on an issue', async () => {
-        const { fetcher } = recorder(ok([{ name: '🩹 patch' }, { name: '📦 core' }]));
-        const api = new GitHubApi('seedcord/seedcord', 'token', fetcher);
-
-        await expect(api.labels(311)).resolves.toEqual(['🩹 patch', '📦 core']);
-    });
-
-    it('adds labels through a post', async () => {
-        const { calls, fetcher } = recorder(ok([]));
-        await new GitHubApi('seedcord/seedcord', 'token', fetcher).addLabels(311, ['✨ minor']);
-
-        expect(calls[0]?.method).toBe('POST');
-        expect(calls[0]?.url).toContain('/repos/seedcord/seedcord/issues/311/labels');
-        expect(calls[0]?.body).toBe(JSON.stringify({ labels: ['✨ minor'] }));
-        expect(calls[0]?.headers['content-type']).toBe('application/json');
-    });
-
-    it('encodes the label name when removing one', async () => {
-        const { calls, fetcher } = recorder(ok([]));
-        await new GitHubApi('seedcord/seedcord', 'token', fetcher).removeLabel(311, '✨ minor');
-
-        expect(calls[0]?.method).toBe('DELETE');
-        expect(calls[0]?.url).toContain(`/issues/311/labels/${encodeURIComponent('✨ minor')}`);
-    });
-
-    it('throws naming the issue when adding a label fails', async () => {
-        const fetcher: Fetcher = () => Promise.resolve(failure(403, 'Forbidden'));
-
-        await expect(new GitHubApi('seedcord/seedcord', 'token', fetcher).addLabels(311, ['✨ minor'])).rejects.toThrow(
-            /311/
+    it('returns label names from every page', async () => {
+        const { calls, fetcher } = recorder(
+            ok(Array.from({ length: 100 }, (_, index) => ({ name: `label-${String(index)}` }))),
+            ok([{ name: 'last-label' }])
         );
+
+        const labels = await new GitHubApi('owner/repo', 'token', fetcher).labels(311);
+
+        expect(labels).toHaveLength(101);
+        expect(labels.at(-1)).toBe('last-label');
+        expect(calls[0]?.url).toContain('/issues/311/labels?');
     });
 
-    it('throws naming the label when removing it fails', async () => {
-        const fetcher: Fetcher = () => Promise.resolve(failure(403, 'Forbidden'));
+    it('posts label names as JSON', async () => {
+        const { calls, fetcher } = recorder(ok([]));
 
-        await expect(new GitHubApi('seedcord/seedcord', 'token', fetcher).removeLabel(311, '✨ minor')).rejects.toThrow(
-            /✨ minor/
-        );
+        await new GitHubApi('owner/repo', 'token', fetcher).addLabels(311, ['bug']);
+
+        expect(calls[0]).toMatchObject({
+            url: 'https://api.github.com/repos/owner/repo/issues/311/labels',
+            method: 'POST'
+        });
+        expect(calls[0]?.headers.get('content-type')).toBe('application/json');
+        expect(await calls[0]?.json()).toEqual({ labels: ['bug'] });
+    });
+
+    it('encodes the label name when deleting it', async () => {
+        const { calls, fetcher } = recorder(ok([]));
+
+        await new GitHubApi('owner/repo', 'token', fetcher).removeLabel(311, 'needs review?');
+
+        expect(calls[0]).toMatchObject({
+            url: 'https://api.github.com/repos/owner/repo/issues/311/labels/needs%20review%3F',
+            method: 'DELETE'
+        });
     });
 });

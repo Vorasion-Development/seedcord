@@ -207,7 +207,7 @@ const messages = {
     [SeedcordErrorCode.MatchArmMissing]: (handler: string, kind: string, value: string) =>
         `${paint.bold(handler)}'s match() has no arm for the ${kind} ${quoted(value)}. Add one to the object you pass to match().`,
     [SeedcordErrorCode.EventNameUnavailable]: (handler: string, read: string) =>
-        `${paint.sky(handler)} read ${paint.bold(read)}, but it was constructed without the name of the event that fired. The event controller passes that name. A handler or middleware you construct yourself takes it as the fourth constructor argument.`,
+        `${paint.sky(handler)} read ${paint.bold(read)}, but it was constructed without an event name. The event controller passes that name. A handler or middleware you construct yourself takes it as the fourth constructor argument.`,
     [SeedcordErrorCode.AutocompleteNoFocusedOption]: () =>
         'Discord sent an autocomplete payload with no focused option.',
     [SeedcordErrorCode.ModalFieldNotFound]: (customId: string) =>

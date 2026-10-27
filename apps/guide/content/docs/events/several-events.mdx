@@ -5,7 +5,7 @@ description: Run one handler class for several discord.js events with this.match
 
 A member log might post when someone joins and again when someone changes their profile. Two handler classes would each need the posting code, so you'd pull it into a shared helper that both files import.
 
-One class can answer both instead. [`@RegisterEvent`](ref:gateway/RegisterEvent) takes as many event tuples as you pass it. [`this.match`](ref:gateway/EventHandler.match) runs the arm for whichever event fired.
+One class can answer both instead. [`@RegisterEvent`](ref:gateway/RegisterEvent) takes as many event tuples as you pass it. [`this.match`](ref:gateway/EventHandler.match) runs the arm for the current event.
 
 ```ts twoslash hovers title="src/events/MemberLog.ts"
 import { EventHandler, RegisterEvent } from '@seedcord/gateway';
@@ -39,7 +39,7 @@ You write the events twice. `MemberLog` passes `@RegisterEvent` one tuple for ea
 
 <Callout type="warning">
 
-[`this.event`](ref:gateway/EventHandler.event) is `never` on a handler registered for several events, since the payload depends on which one fired. Read the payload through `this.match` there.
+[`this.event`](ref:gateway/EventHandler.event) is `never` on a handler registered for several events, since the payload depends on the event's name. Read the payload through `this.match` there.
 
 </Callout>
 
@@ -131,11 +131,11 @@ class MemberLog extends EventHandler<
 }
 ```
 
-`what` is a `string`. `post(what)` runs once, whichever event fired.
+`what` is a `string`. `post(what)` runs once for either event.
 
 ## Mixed frequency
 
-Each tuple carries its own options, so one event can run once while the others keep firing.
+Each tuple carries its own options, so one event's handler can run once while the others run on every dispatch.
 
 ```ts
 @RegisterEvent(
@@ -148,7 +148,7 @@ Here the join arm runs for the first member and never again. The update arm runs
 
 <Callout type="warning">
 
-seedcord records a `once` run against the whole class. If one class marks two different events as `once`, like `guildMemberAdd` and `guildMemberUpdate`, whichever fires first marks the class as run. The other event's arm then won't run until your bot restarts. Put each run-once event in its own class.
+seedcord records a `once` run against the whole class. If one class marks two different events as `once`, like `guildMemberAdd` and `guildMemberUpdate`, seedcord marks the class as run when it processes either event. The other event's arm then won't run until your bot restarts. Put each run-once event in its own class.
 
 An arm on that class without `once` still runs every time. Another class registered for the same event keeps its own record and follows its own `frequency`.
 

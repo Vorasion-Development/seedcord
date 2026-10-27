@@ -90,7 +90,7 @@ class Menu extends UserContextMenuHandler<'hb Profile' | 'hb Greet'> {
     }
 
     public readName(): 'hb Profile' | 'hb Greet' {
-        return this.commandName;
+        return this.route;
     }
 }
 
@@ -132,7 +132,7 @@ class UnknownArm extends UserContextMenuHandler<'hb Profile'> {
 void UnknownArm;
 
 describe('http context menu match', () => {
-    it('runs the arm for the command that fired', async () => {
+    it('runs the arm for the selected command', async () => {
         await expect(new Menu(userMenuEvent('hb Profile'), core, dispatch).run()).resolves.toBe('profile:dhruv:dee');
         await expect(new Menu(userMenuEvent('hb Greet'), core, dispatch).run()).resolves.toBe('greet:dhruv');
     });
@@ -141,7 +141,7 @@ describe('http context menu match', () => {
         await expect(new Tools(messageMenuEvent('hb Pin'), core, dispatch).run()).resolves.toBe('pinned msg1');
     });
 
-    it('throws when the fired command has no arm', async () => {
+    it('throws when the selected command has no arm', async () => {
         await expect(new Menu(userMenuEvent('hb Greet'), core, dispatch).runPartial()).rejects.toSatisfy(
             (error: unknown) => isSeedcordError(error, 'SeedcordTypeError', SeedcordErrorCode.MatchArmMissing)
         );
@@ -153,7 +153,7 @@ describe('http context menu match', () => {
         );
     });
 
-    it('reads the fired command name without an arm', () => {
+    it('reads the selected command name without an arm', () => {
         expect(new Menu(userMenuEvent('hb Greet'), core, dispatch).readName()).toBe('hb Greet');
     });
 });

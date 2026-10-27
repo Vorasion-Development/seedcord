@@ -110,9 +110,8 @@ export interface Gate<Ctx extends GateContextBase = GateContextBase, Name extend
 }
 
 /**
- * A gate that carries a side effect, split so the effect fires only once the gate is the one that
- * let the request through. `check` peeks and refuses, while `commit` applies the effect after the whole
- * gate set passes. {@link Cooldown} is the catalog gate that returns one. Build one with
+ * A gate whose `check` method can refuse a request without applying its side effect. `commit` applies
+ * the effect after every gate passes. {@link Cooldown} is the catalog gate that returns one. Build one with
  * {@link defineEffectGate}.
  *
  * @typeParam Ctx - The context both `check` and `commit` require. A field missing from it fails to compile.

@@ -30,7 +30,7 @@ describe("Bus 'once' re-entrancy", () => {
         class ReentrantOnce extends Subscriber<'unknownException', CoreBase> {
             public execute(): Promise<void> {
                 runs += 1;
-                // the old fire-then-mark order ran this a second time
+                // the old invoke-then-mark order ran this a second time
                 if (runs === 1) this.core.bus[PublishDefault]('unknownException', payload);
                 return Promise.resolve();
             }

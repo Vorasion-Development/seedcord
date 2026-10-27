@@ -8,7 +8,7 @@ type Listener = (...args: unknown[]) => void;
 // removes each listener added for those signals until disposed
 export function fenceSignals(): Disposable {
     const remove = (event: string | symbol, listener: Listener): void => {
-        // node adds the listener after newListener fires
+        // node adds the listener after emitting newListener
         if (FENCED_SIGNALS.has(event)) queueMicrotask(() => process.off(event, listener));
     };
     process.on('newListener', remove);

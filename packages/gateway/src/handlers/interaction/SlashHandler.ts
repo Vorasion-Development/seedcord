@@ -44,6 +44,11 @@ export abstract class SlashHandler<
     /** @internal */
     declare readonly [SlashRouteBrand]?: Route;
 
+    /** The selected command's path, such as `search/docs`. */
+    protected get route(): Route {
+        return slashRouteOf(this.event) as Route;
+    }
+
     /**
      * The typed options for this command's route. Only the getters for kinds this command declares appear.
      * Each getter's name argument is restricted to that command's options of its kind.
@@ -63,7 +68,7 @@ export abstract class SlashHandler<
     }
 
     /**
-     * Run the arm for whichever command fired. Use this only when the handler is registered for several
+     * Run the arm for the selected command. Use this only when the handler is registered for several
      * routes.
      *
      * Provide one arm per registered route, keyed by its route string, and each arm receives that route's
@@ -87,7 +92,7 @@ export abstract class SlashHandler<
      * ```
      */
     protected async match<Ret>(arms: SlashMatchArms<Route, Cache, Ret>): Promise<Ret> {
-        const route = slashRouteOf(this.event);
+        const route = this.route;
         // justified: SlashMatchArms is keyed by Route literals, so the Record cast indexes it with the runtime route string.
         const arm = Object.hasOwn(arms, route)
             ? (arms as Record<string, (options: SlashOptions<Route, Cache>) => Promisable<Ret>>)[route]

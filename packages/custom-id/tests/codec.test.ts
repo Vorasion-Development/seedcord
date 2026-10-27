@@ -529,7 +529,7 @@ describe('CustomId definition guards', () => {
     });
 
     it('rejects a oneOf with no choices', () => {
-        // the type rejects an empty list, so cast past it to prove the runtime guard still fires.
+        // the type rejects an empty list, so cast past it to prove the runtime guard still throws.
         const empty = [] as unknown as [string]; // fixture cast, bypass NonEmptyTuple to reach the runtime guard
         expect(thrownCode(() => new CustomId('poll').oneOf('choice', empty))).toBe(
             SeedcordErrorCode.CustomIdEmptyChoices

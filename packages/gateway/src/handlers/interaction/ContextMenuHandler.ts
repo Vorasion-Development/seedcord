@@ -86,13 +86,13 @@ export abstract class UserContextMenuHandler<
         return this.event.targetMember;
     }
 
-    /** Which of the registered commands fired. */
-    protected get commandName(): Names {
+    /** The selected context-menu command's name, without the interaction-kind prefix. */
+    protected get route(): Names {
         return this.event.commandName as Names;
     }
 
     /**
-     * Run the arm for whichever command fired. Use this only when the handler is registered for several
+     * Run the arm for the selected command. Use this only when the handler is registered for several
      * names.
      *
      * Provide one arm per registered name, keyed by the name Discord shows in the right-click menu. Each
@@ -117,7 +117,7 @@ export abstract class UserContextMenuHandler<
      * ```
      */
     protected async match<Ret>(arms: UserMenuArms<Names, Ret>): Promise<Ret> {
-        const arm = armFor<Ret>(this, arms, this.event.commandName);
+        const arm = armFor<Ret>(this, arms, this.route);
         return await (arm as (target: User, member: unknown) => Promisable<Ret>)(this.target, this.targetMember);
     }
 }
@@ -154,13 +154,13 @@ export abstract class MessageContextMenuHandler<
         return this.event.targetMessage;
     }
 
-    /** Which of the registered commands fired. */
-    protected get commandName(): Names {
+    /** The selected context-menu command's name, without the interaction-kind prefix. */
+    protected get route(): Names {
         return this.event.commandName as Names;
     }
 
     /**
-     * Run the arm for whichever command fired. Use this only when the handler is registered for several
+     * Run the arm for the selected command. Use this only when the handler is registered for several
      * names.
      *
      * Provide one arm per registered name, keyed by the name Discord shows in the right-click menu. Each
@@ -184,7 +184,7 @@ export abstract class MessageContextMenuHandler<
      * ```
      */
     protected async match<Ret>(arms: MessageMenuArms<Names, Ret>): Promise<Ret> {
-        const arm = armFor<Ret>(this, arms, this.event.commandName);
+        const arm = armFor<Ret>(this, arms, this.route);
         return await (arm as (target: Message<BooleanCache<Cache>>) => Promisable<Ret>)(this.target);
     }
 }

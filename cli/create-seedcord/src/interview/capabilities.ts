@@ -70,7 +70,7 @@ export const CAPABILITIES = [
     {
         id: 'automod',
         label: 'AutoMod',
-        hint: 'know when a server AutoMod rule changes or fires',
+        hint: 'know when a server AutoMod rule changes or takes action',
         intents: ['AutoModerationConfiguration', 'AutoModerationExecution'],
         partials: []
     },

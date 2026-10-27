@@ -5,7 +5,7 @@ description: Measure how long your bot takes to answer with the telemetry keys o
 
 When a command feels slow, you want to know whether your code or Discord caused the delay. Timing each handler yourself means a stopwatch in every `execute()`, which still misses the gates and the replies around it.
 
-seedcord measures each dispatch for you and publishes the numbers on the bus. `interactionDispatched` fires once per interaction, after your handler finishes. `responseAttempted` fires on every write through the reply surface, so one interaction can produce several. That count includes the error card seedcord sends when your handler throws.
+seedcord measures each dispatch for you and publishes the numbers on the bus. It publishes `interactionDispatched` once per interaction, after your handler finishes, and `responseAttempted` on every write through the reply surface. One interaction can produce several response reports. That count includes the error card seedcord sends when your handler throws.
 
 ```ts twoslash title="src/subscribers/SlowDispatch.ts"
 import { Subscribe, Subscriber } from '@seedcord/gateway';
@@ -138,7 +138,7 @@ Discord can return a `reply` or an `update` without the message it should carry.
 
 ## What one `eventDispatched` reports
 
-When an event fires, seedcord runs every handler you registered for it, each behind its own fault boundary. A failing handler doesn't stop the others, so without a report per handler you'd only find it in the error log. `eventDispatched` publishes once all of those handlers have finished.
+When discord.js emits an event, seedcord runs every handler you registered for it, each behind its own fault boundary. A failing handler doesn't stop the others, so without a report per handler you'd only find it in the error log. seedcord publishes `eventDispatched` once all of those handlers have finished.
 
 <Callout type="transport" only="gateway">
 
@@ -219,7 +219,7 @@ export class Trace extends InteractionMiddleware {
 }
 ```
 
-`Trace` records `this.dispatch.id` before any of these keys fire. A handler reaches it through `this.dispatch.id`, a gate through `ctx.dispatch.id`, and an error card through its render context.
+`Trace` records `this.dispatch.id` before seedcord publishes any of these keys. A handler reaches it through `this.dispatch.id`, a gate through `ctx.dispatch.id`, and an error card through its render context.
 
 On the subscriber side, write `dispatchId` as a column in every row and query on it.
 

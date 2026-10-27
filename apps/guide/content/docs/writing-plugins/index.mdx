@@ -86,7 +86,7 @@ Handlers can call those methods only after startup. Startup runs in three phases
 
 ## Closing what init() opened
 
-A timer that `init()` starts keeps firing after the bot begins shutting down, and an open connection keeps the process from exiting. `dispose()` runs at shutdown. Close in it whatever `init()` started.
+A timer that `init()` starts keeps running its callback after the bot begins shutting down, and an open connection keeps the process from exiting. `dispose()` runs at shutdown. Close in it whatever `init()` started.
 
 ```ts twoslash title="src/plugins/Heartbeat.ts"
 import { Plugin } from '@seedcord/gateway';

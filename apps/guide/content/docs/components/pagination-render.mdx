@@ -54,7 +54,7 @@ export class FeedList extends SlashHandler<'feed'> {
 }
 ```
 
-If you run that, you get one line of text with no way to reach page two. `FeedNav` is wired correctly. It never fires, since no button on the message carries its route. Everything below puts the buttons back.
+If you run that, you get one line of text with no way to reach page two. `FeedNav` is wired correctly. It never runs, since no button on the message carries its route. Everything below puts the buttons back.
 
 A string is one of three shapes `render` can return.
 

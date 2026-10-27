@@ -84,7 +84,7 @@ ruleTester.run('subscriber-missing-decorators', rule, {
             errors: [{ messageId: 'missingSubscribe' }]
         },
         {
-            // both decorators from another module, both reports fire
+            // both decorators from another module, both diagnostics are reported
             code: dedent`
                 import { WebhookLog } from 'seedcord';
                 import { Subscribe, WebhookUrl } from 'some-other-lib';

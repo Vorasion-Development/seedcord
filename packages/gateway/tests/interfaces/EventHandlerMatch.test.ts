@@ -182,7 +182,7 @@ describe('EventHandler.match', () => {
         await expect(handler.execute()).rejects.toBeInstanceOf(BoomError);
     });
 
-    it('routes by the fired event name, not the payload shape', async () => {
+    it('routes by the current event name, not the payload shape', async () => {
         const created = fakeMessage();
         await new PingMulti(createPayload(created), core, dispatch, Events.MessageCreate).execute();
         expect(created.reply).toHaveBeenCalledWith('created');
@@ -203,7 +203,7 @@ describe('EventHandler.match', () => {
         expect(handler.read()).toHaveLength(1);
     });
 
-    it('throws MatchArmMissing when the fired event has no arm', async () => {
+    it('throws MatchArmMissing when the current event has no arm', async () => {
         // a stale-deployed event arrives that the handler does not branch on
         const handler = new PingMulti(createPayload(fakeMessage()), core, dispatch, 'ghost' as Events.MessageCreate);
         await expect(handler.execute()).rejects.toMatchObject({ code: SeedcordErrorCode.MatchArmMissing });

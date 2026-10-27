@@ -119,7 +119,7 @@ The interaction callback for reply() returned no message.
 (route slash:ban)
 ```
 
-Your handler can't cause this throw. The callback carries that message on every documented path, so this one fires when Discord's response doesn't include it.
+Your handler can't cause this throw. The callback carries that message on every documented path, so seedcord throws this error when Discord's response doesn't include it.
 
 ## update() on a modal a command opened
 

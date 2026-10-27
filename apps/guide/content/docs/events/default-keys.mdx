@@ -9,7 +9,7 @@ The `where` column says which transport publishes each key.
 
 {/* prettier-ignore-start */}
 
-| key | where | fires when |
+| key | where | published when |
 | --- | --- | --- |
 | `unknownException` | both | a raw throw reaches the fault boundary, or the Node process catches an unhandled error |
 | `handledException` | both | a [`Notice`](ref:core/Notice) with `report` true is caught |
@@ -34,7 +34,7 @@ On http, seedcord publishes it only after the request passes Ed25519 verificatio
 
 ## After a deploy
 
-seedcord logs every deploy and fills [`Commands`](/commands/mentions) with each command's mention, so your handlers don't need this key. `commandsDeployed` is for sending your commands somewhere outside the bot, like a bot listing site such as Top.gg that shows your command list. It fires after every deploy, including the redeploy that follows a hot reload.
+seedcord logs every deploy and fills [`Commands`](/commands/mentions) with each command's mention, so your handlers don't need this key. `commandsDeployed` is for sending your commands somewhere outside the bot, like a bot listing site such as Top.gg that shows your command list. seedcord publishes it after every deploy, including the redeploy that follows a hot reload.
 
 ```ts twoslash title="src/subscribers/ListCommands.ts"
 import { Subscribe, Subscriber } from '@seedcord/gateway';
@@ -61,7 +61,7 @@ export class ListCommands extends Subscriber<'commandsDeployed'> {
 
 ## Watching everything come in
 
-A trace of everything your bot receives helps when a command doesn't seem to run at all. `anyInteraction` fires before seedcord routes an interaction anywhere. `eventDispatching` fires for client events, ahead of the handlers.
+A trace of everything your bot receives helps when a command doesn't seem to run at all. seedcord publishes `anyInteraction` before routing an interaction and `eventDispatching` before running handlers for a client event.
 
 ```ts twoslash title="src/subscribers/Trace.ts"
 import { Subscribe, Subscriber } from '@seedcord/gateway';
@@ -82,11 +82,11 @@ export class Trace extends Subscriber<'eventDispatching'> {
 
 <Callout type="warning">
 
-`eventDispatching` fires only when at least one handler is about to run. It doesn't fire for an event that no handler registered, or for an event whose handlers were all `once` and have already run. It fires before your middleware runs, so if a middleware stops the event, this key has already been published.
+seedcord publishes `eventDispatching` only when at least one handler is about to run. It doesn't publish it for an event that no handler registered, or for an event whose handlers were all `once` and have already run. The key is published before middleware runs, including when middleware later stops the dispatch.
 
 </Callout>
 
-`eventDispatched` fires once the handlers finish. Its fields, including each handler's outcome, are on [the telemetry page](/events/telemetry).
+seedcord publishes `eventDispatched` once the handlers finish. Its fields, including each handler's outcome, are on [the telemetry page](/events/telemetry).
 
 ## The two unhandled errors
 
@@ -94,7 +94,7 @@ A throw from your handlers, gates, or middleware reaches the fault boundary, whi
 
 ## The fault keys
 
-These two keys carry a fault out of your bot, to a log service or a Discord channel. `unknownException` fires on a raw throw.
+These two keys carry a fault out of your bot, to a log service or a Discord channel. seedcord publishes `unknownException` on a raw throw.
 
 {/* prettier-ignore-start */}
 
@@ -112,7 +112,7 @@ These two keys carry a fault out of your bot, to a log service or a Discord chan
 
 A reported `Notice` thrown from an autocomplete also publishes here, since [`FaultSource`](ref:core/FaultSource) only has shapes for interactions and events. Check `error` with `instanceof Notice` if your subscriber treats the two differently.
 
-`handledException` fires on a [`Notice`](ref:core/Notice) with `report` true.
+seedcord publishes `handledException` on a [`Notice`](ref:core/Notice) with `report` true.
 
 {/* prettier-ignore-start */}
 

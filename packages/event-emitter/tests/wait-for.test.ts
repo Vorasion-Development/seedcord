@@ -8,7 +8,7 @@ interface Events {
 }
 
 describe('TypedEventEmitter.waitFor', () => {
-    it('resolves with the payload tuple when the event fires', async () => {
+    it('resolves with the payload tuple when the event is emitted', async () => {
         const ee = new TypedEventEmitter<Events>();
         const pending = ee.waitFor('ping');
         ee.emit('ping', 42);

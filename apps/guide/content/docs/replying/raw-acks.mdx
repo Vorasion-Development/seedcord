@@ -36,7 +36,7 @@ Every later call reads that same stale state, so [`followUp()`](ref:gateway/Repl
 
 ## The lint rule
 
-The `edit()` throw above only fires when someone runs the command. The lint rule reports the raw call while you write it.
+The `edit()` call above throws only when someone runs the command. The lint rule reports the raw call while you write it.
 
 `@seedcord/no-raw-interaction-acks` reports every ack method on a repliable interaction inside a handler or middleware class, plus `respond()` on an autocomplete one. The recommended preset turns it on as an error.
 
