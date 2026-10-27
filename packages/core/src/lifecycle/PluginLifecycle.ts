@@ -74,7 +74,9 @@ export class PluginLifecycle {
                 await withTimeout(`Plugin (${key})`, () => running, spec.init.timeout);
             } catch (caught) {
                 if (isSeedcordError(caught, undefined, SeedcordErrorCode.LifecycleTaskTimeout)) {
-                    this.disposeWhenInitResolves(attachment, running);
+                    // FIXME: Promisable<void> support isn't a one-and-done issue, need to handle both sync and async cases
+                    // @ts-expect-error Promisable<void> is compatible with Promise<void> for async functions
+                    this.disposeWhenInitResolves(attachment, 'then' in running ? running : Promise.resolve(running));
                 }
                 throw caught;
             }
@@ -105,7 +107,8 @@ export class PluginLifecycle {
     private registerReadyTask(readyInits: readonly Attachment[]): void {
         const steps = this.attachments.reduce<ReadyStep[]>((acc, { key, instance, spec }) => {
             const ready = instance.ready?.bind(instance);
-            if (ready) acc.push({ key, run: ready, timeout: spec.ready.timeout });
+
+            if (ready) acc.push({ key, run: async () => ready(), timeout: spec.ready.timeout });
             return acc;
         }, []);
         if (readyInits.length === 0 && steps.length === 0) return;

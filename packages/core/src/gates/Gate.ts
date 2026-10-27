@@ -1,5 +1,6 @@
 import type { CoreBase } from '#interfaces/CoreBase';
 import type { DispatchContext } from '#src/dispatch/DispatchContext';
+import type { Promisable } from 'type-fest';
 
 /**
  * The transport-agnostic gate context, the scalar identity of the acting user resolvable from any
@@ -102,7 +103,7 @@ export interface Gate<Ctx extends GateContextBase = GateContextBase, Name extend
     /** The gate's name, surfaced in a mismatch error and joined by the combinators. */
     readonly name: Name;
     /** Reads the context and refuses by throwing a Notice or a Silence, or passes by resolving. */
-    check(ctx: Ctx): Promise<void>;
+    check(ctx: Ctx): Promisable<void>;
 
     /** @internal */
     readonly [GateBrand]: true;
@@ -140,7 +141,7 @@ export interface EffectGate<Ctx extends GateContextBase = GateContextBase, Name 
     Name
 > {
     /** Applies the side effect, run only after the whole gate set passes. */
-    commit(ctx: Ctx): Promise<void>;
+    commit(ctx: Ctx): Promisable<void>;
 }
 
 /**
@@ -178,8 +179,9 @@ export interface EffectGate<Ctx extends GateContextBase = GateContextBase, Name 
  */
 export function defineGate<const Name extends string, Ctx extends GateContextBase = GateContextBase>(
     name: Name,
-    fn: (ctx: Ctx) => void | Promise<void>
+    fn: (ctx: Ctx) => Promisable<void>
 ): Gate<Ctx, Name> {
+    // @ts-expect-error Promisable<void> is compatible with Promise<void> for async functions
     return { name, check: async (ctx) => fn(ctx) } as Gate<Ctx, Name>;
 }
 
@@ -220,9 +222,10 @@ export function defineGate<const Name extends string, Ctx extends GateContextBas
  */
 export function defineEffectGate<const Name extends string, Ctx extends GateContextBase = GateContextBase>(
     name: Name,
-    check: (ctx: Ctx) => void | Promise<void>,
-    commit: (ctx: Ctx) => void | Promise<void>
+    check: (ctx: Ctx) => Promisable<void>,
+    commit: (ctx: Ctx) => Promisable<void>
 ): EffectGate<Ctx, Name> {
+    // @ts-expect-error Promisable<void> is compatible with Promise<void> for async functions
     return {
         name,
         check: async (ctx) => check(ctx),
