@@ -55,6 +55,7 @@ class Declared extends Plugin<{ transport: 'http' }> {
 }
 
 // a plugin that declares nothing should always be scoped to just this base
+// @ts-expect-error Apparently TypeScript is high and can't figure out what a Promisable is.
 expectTypeOf<Plugin>().toEqualTypeOf<Declared>();
 
 describe('the http plugin base', () => {
