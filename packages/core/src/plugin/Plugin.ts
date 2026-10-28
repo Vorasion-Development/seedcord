@@ -2,7 +2,6 @@ import { SeedcordErrorCode } from '@seedcord/errors';
 import { SeedcordTypeError } from '@seedcord/errors/internal';
 import { Logger } from '@seedcord/logger';
 
-
 import { getDevChannel } from '#hmr/devChannel';
 
 import { RuntimeBrand, TransportBrand } from './brands';

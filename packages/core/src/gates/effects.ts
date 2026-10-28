@@ -20,7 +20,7 @@ export async function runCheck(gate: Gate<GateContextBase>, ctx: GateContextBase
         queue = [];
         commitQueues.set(ctx, queue);
     }
-    queue.push(() => gate.commit(ctx));
+    queue.push(async () => gate.commit(ctx));
 }
 
 export async function runCommits(ctx: GateContextBase): Promise<void> {

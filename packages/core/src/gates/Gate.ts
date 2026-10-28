@@ -103,7 +103,7 @@ export interface Gate<Ctx extends GateContextBase = GateContextBase, Name extend
     /** The gate's name, surfaced in a mismatch error and joined by the combinators. */
     readonly name: Name;
     /** Reads the context and refuses by throwing a Notice or a Silence, or passes by resolving. */
-    check(ctx: Ctx): Promisable<void>;
+    check(ctx: Ctx): Promise<void>;
 
     /** @internal */
     readonly [GateBrand]: true;
@@ -180,7 +180,6 @@ export function defineGate<const Name extends string, Ctx extends GateContextBas
     name: Name,
     fn: (ctx: Ctx) => Promisable<void>
 ): Gate<Ctx, Name> {
-    // @ts-expect-error Promisable<void> is compatible with Promise<void> for async functions
     return { name, check: async (ctx) => fn(ctx) } as Gate<Ctx, Name>;
 }
 
