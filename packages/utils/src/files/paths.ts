@@ -14,6 +14,14 @@ export function posixRelative(from: string, to: string): string {
     return toPosixPath(path.relative(from, to));
 }
 
+const CODE_EXTENSION = /\.[mc]?[jt]sx?$/;
+
+// bots extend @seedcord/tsconfig. its moduleResolution bundler finds ./bot without the .ts
+export function importSpecifier(fromDir: string, file: string): string {
+    const specifier = posixRelative(fromDir, file).replace(CODE_EXTENSION, '');
+    return specifier.startsWith('../') ? specifier : `./${specifier}`;
+}
+
 // workerd's node:path is posix. it reads D:/bot as relative
 export function workerdPath(hostPath: string): string {
     const forward = hostPath.replaceAll('\\', '/');

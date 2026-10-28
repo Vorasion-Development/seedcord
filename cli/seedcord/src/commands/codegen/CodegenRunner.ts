@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { SeedcordErrorCode, paint } from '@seedcord/errors';
 import { SeedcordError } from '@seedcord/errors/internal';
 import { HostAugmentTarget, HostPluginKeys, type SeedcordInstance } from '@seedcord/types/internal';
-import { posixRelative } from '@seedcord/utils/internal';
+import { importSpecifier } from '@seedcord/utils/internal';
 
 import { openProjectWithSteps } from '#core/config/openProjectWithSteps';
 import { ProjectLoader } from '#core/config/ProjectLoader';
@@ -28,8 +28,6 @@ import type { ScannedCommand } from './AugmentationBuilder';
 import type { ILogger } from '@seedcord/types';
 
 const OUTPUT_FILENAME = 'seedcord-gen.d.ts';
-
-const ENTRY_EXTENSION = /\.[mc]?[jt]sx?$/;
 
 export interface LoadedBot {
     readonly config: ResolvedSeedcordConfig;
@@ -58,12 +56,6 @@ interface CodegenRunnerDeps {
     readonly projectLoader: ProjectOpener;
     readonly generator: AugmentationBuilder;
     readonly logger: ILogger;
-}
-
-// extensionless resolves under moduleResolution bundler, which a seedcord project sets
-function botSpecifier(root: string, instance: string): string {
-    const posix = posixRelative(root, instance).replace(ENTRY_EXTENSION, '');
-    return posix.startsWith('.') ? posix : `./${posix}`;
 }
 
 export class CodegenRunner {
@@ -117,7 +109,7 @@ export class CodegenRunner {
     private render(config: ResolvedSeedcordConfig, instance: SeedcordInstance, commands: ScannedCommand[]): string {
         const emojis = instance.config.bot.emojis ?? {};
         return renderAugmentation(this.deps.generator.generate(commands, emojis), instance[HostAugmentTarget], {
-            specifier: botSpecifier(config.root, config.instance),
+            specifier: importSpecifier(config.root, config.instance),
             keys: instance[HostPluginKeys]
         });
     }
