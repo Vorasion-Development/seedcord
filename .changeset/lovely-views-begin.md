@@ -5,4 +5,4 @@
 '@seedcord/http': minor
 ---
 
-**BREAKING:** Plugin hooks, handler methods, and gate callbacks can now finish synchronously or asynchronously. Callers that expect a promise must use `await` or wrap the returned value in `Promise.resolve(...)` before chaining promise methods.
+**BREAKING:** Plugin `init()`, `ready()`, `dispose()` and `onHmr()`, handler `execute()`, and middleware `after()` can now return without a promise. Code that calls one of them directly and chains `.then()` must `await` it or wrap it in `Promise.resolve()`.
