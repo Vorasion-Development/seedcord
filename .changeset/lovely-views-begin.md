@@ -4,4 +4,4 @@
 '@seedcord/types': minor
 ---
 
-Allowed a synchronous method in many classes, ensuring that methods don't have to have a Promise.resolve to be valid to TypeScript.
+**BREAKING:** Plugin hooks, handler methods, and gate callbacks can now finish synchronously or asynchronously. Callers that expect a promise must use `await` or wrap the returned value in `Promise.resolve(...)` before chaining promise methods.
