@@ -140,7 +140,7 @@ export interface EffectGate<Ctx extends GateContextBase = GateContextBase, Name 
     Name
 > {
     /** Applies the side effect, run only after the whole gate set passes. */
-    commit(ctx: Ctx): Promisable<void>;
+    commit(ctx: Ctx): Promise<void>;
 }
 
 /**
@@ -223,7 +223,6 @@ export function defineEffectGate<const Name extends string, Ctx extends GateCont
     check: (ctx: Ctx) => Promisable<void>,
     commit: (ctx: Ctx) => Promisable<void>
 ): EffectGate<Ctx, Name> {
-    // @ts-expect-error Promisable<void> is compatible with Promise<void> for async functions
     return {
         name,
         check: async (ctx) => check(ctx),
