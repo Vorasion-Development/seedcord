@@ -11,10 +11,11 @@ import type { CoordinatedShutdown } from '#node/Lifecycle/CoordinatedShutdown';
 import type { ShutdownPhase } from '#src/lifecycle/phases';
 import type { Attachment } from '#src/plugin/PluginHost';
 import type { CoordinatedStartup } from './CoordinatedStartup';
+import type { Promisable } from 'type-fest';
 
 interface ReadyStep {
     readonly key: string;
-    readonly run: () => Promise<void>;
+    readonly run: () => Promisable<void>;
     readonly timeout: number;
 }
 
@@ -106,7 +107,7 @@ export class PluginLifecycle {
         const steps = this.attachments.reduce<ReadyStep[]>((acc, { key, instance, spec }) => {
             const ready = instance.ready?.bind(instance);
 
-            if (ready) acc.push({ key, run: async () => ready(), timeout: spec.ready.timeout });
+            if (ready) acc.push({ key, run: ready, timeout: spec.ready.timeout });
             return acc;
         }, []);
         if (readyInits.length === 0 && steps.length === 0) return;
