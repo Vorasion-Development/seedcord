@@ -34,11 +34,15 @@ A command file declares the command. A handler class replies to it. Read ${GUIDE
 
 Run \`seedcord codegen\` after you add or change a command. The handler generics read the tables it writes.
 
-## 5. Check every claim before you write it
+## 5. Try it against Discord
+
+Run \`seedcord dev\` in the background. Without a terminal it prints each log line as JSON and takes commands on stdin, like \`{"do":"restart"}\`. Ask the user to run the command in Discord, then read what it logged. ${GUIDE}/tooling/dev.md lists the commands.
+
+## 6. Check every claim before you write it
 
 Fetch the page for the surface you are using. Every page answers at its own url plus \`.md\`, so ${GUIDE}/checks/gates.md is the Gates page.
 
-## 6. Build for production
+## 7. Build for production
 
 Read ${GUIDE}/build.md before you run \`seedcord build\`. It covers a node server and Cloudflare Workers.
 `;

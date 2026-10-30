@@ -150,6 +150,10 @@ Nothing gets a test for staying absent. A deleted export leaves no caller that c
 
 A fixture cast is fine with a short comment naming what makes it safe. `any` stays banned in tests.
 
+### Trying a feature on a mock
+
+The bots in `mocks/` are there to show a feature working against Discord. Add the feature to the mock for its transport, put a test bot's token in that mock's `.env`, and run `pnpm -C mocks/<name> dev` in the background. Without a terminal it prints JSON log lines and takes commands like `{"do":"restart"}` on stdin. The [dev page](apps/guide/content/docs/tooling/dev.mdx) lists them. Ask the maintainer to run the command in Discord, then check the logs or the state the bot wrote.
+
 ---
 
 ## Apps

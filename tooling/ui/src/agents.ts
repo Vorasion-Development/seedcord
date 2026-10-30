@@ -65,6 +65,7 @@ const FRAMEWORK_RULES = [
     'Read the current version of every package from the npm registry. Each one has its own version number.',
     'A command is declared in one file and answered in another, by a handler class carrying a route decorator. seedcord reads those decorators at startup and dispatches every interaction itself.',
     '`seedcord codegen` writes the typed tables for slash commands, user and message context menus, emojis, and plugin keys. Run it after changing any of those.',
+    `Try a change against Discord by running \`seedcord dev\` in the background and asking the user to run the command. Without a terminal it logs JSON lines and takes commands on stdin, which ${GUIDE.at('tooling/dev.md')} lists.`,
     `Never import from a seedcord path ending in \`/internal\`, like \`@seedcord/core/internal\`. Those paths wire seedcord's own packages together and change without notice. If the only way to do something is through one, tell the user so they can open an issue at ${REPO_URL}/issues.`,
     `The steps for building a bot are at ${SKILL_URL}.`
 ];
