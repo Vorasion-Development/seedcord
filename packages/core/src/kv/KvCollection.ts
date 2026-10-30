@@ -1,6 +1,9 @@
 import type { KeyedQueue } from './KeyedQueue';
 import type { KvDriver } from '@seedcord/types';
-import type { Jsonify } from 'type-fest';
+import type { Jsonify, Simplify } from 'type-fest';
+
+// a hover shows the record's fields in place of JsonifyObject<...>. SimplifyDeep hits TS2589 in get()
+type Stored<TRecord> = Simplify<Jsonify<TRecord>>;
 
 // expiresAt covers backends that ignore a ttl, like unstorage's fs driver
 interface Envelope<TValue> {
@@ -37,7 +40,7 @@ export class KvCollection<TRecord> {
     }
 
     /** Reads the record stored under `id`. Resolves to `undefined` when nothing is there or the record expired. */
-    public async get(id: string): Promise<Jsonify<TRecord> | undefined> {
+    public async get(id: string): Promise<Stored<TRecord> | undefined> {
         const key = this.#prefix + id;
         const raw = await this.#driver.get(key);
         const value = this.#liveValue(raw);
@@ -79,7 +82,7 @@ export class KvCollection<TRecord> {
      */
     public async update(
         id: string,
-        next: (current: Jsonify<TRecord> | undefined) => TRecord,
+        next: (current: Stored<TRecord> | undefined) => TRecord,
         ttlMs?: number | ((value: TRecord) => number)
     ): Promise<TRecord> {
         const key = this.#prefix + id;
@@ -101,7 +104,7 @@ export class KvCollection<TRecord> {
      * for await (const [id, reminder] of reminders.entries()) schedule(id, reminder);
      * ```
      */
-    public async *entries(): AsyncIterable<[id: string, record: Jsonify<TRecord>]> {
+    public async *entries(): AsyncIterable<[id: string, record: Stored<TRecord>]> {
         const expired: string[] = [];
         try {
             for await (const [key, raw] of this.#driver.entries(this.#prefix)) {
@@ -128,10 +131,10 @@ export class KvCollection<TRecord> {
         });
     }
 
-    #liveValue(raw: string | undefined): Jsonify<TRecord> | undefined {
+    #liveValue(raw: string | undefined): Stored<TRecord> | undefined {
         if (raw === undefined) return undefined;
         // justified: only this collection writes under its prefix
-        const envelope = JSON.parse(raw) as Envelope<Jsonify<TRecord>>;
+        const envelope = JSON.parse(raw) as Envelope<Stored<TRecord>>;
         if (envelope.expiresAt !== undefined && envelope.expiresAt <= Date.now()) return undefined;
         return envelope.value;
     }
