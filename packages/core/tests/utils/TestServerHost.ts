@@ -3,7 +3,6 @@ import { REST } from '@discordjs/rest';
 import { CoordinatedShutdown } from '#node/Lifecycle/CoordinatedShutdown';
 import { ServerHost } from '#node/ServerHost';
 import { CoordinatedStartup } from '#src/lifecycle/CoordinatedStartup';
-import { Bus } from '#subscribers/Bus';
 
 import type { Config } from '@seedcord/types';
 
@@ -11,7 +10,6 @@ export class TestServerHost extends ServerHost<'gateway'> {
     public readonly config: Config;
     public readonly rest = new REST();
     public readonly applicationId = 'app-1';
-    public readonly bus: Bus;
 
     // justified: ServerHost reads only kv and errors off the config
     constructor(
@@ -21,7 +19,6 @@ export class TestServerHost extends ServerHost<'gateway'> {
     ) {
         super('gateway', shutdown, startup, config.kv);
         this.config = config;
-        this.bus = new Bus(this);
     }
 
     public run(): Promise<this> {

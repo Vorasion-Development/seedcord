@@ -21,7 +21,6 @@ import { toWebRequest, writeWebResponse } from './webBridge';
 
 import type { HttpServerConfig } from '#interfaces/Config';
 import type { REST } from '@discordjs/rest';
-import type { Bus } from '@seedcord/core';
 import type { SeedcordInstance } from '@seedcord/types/internal';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -50,9 +49,6 @@ export class Seedcord extends ServerHost<'http'> implements SeedcordInstance {
     /** Discord REST client built from `bot.restOptions`. `start()` sets the token. */
     public readonly rest: REST;
 
-    /** @see {@link Bus} */
-    public readonly bus: Bus;
-
     readonly #service: InteractionsService;
     readonly #endpoint: NodeEndpoint;
     readonly #hmrManager: HmrManager;
@@ -76,7 +72,6 @@ export class Seedcord extends ServerHost<'http'> implements SeedcordInstance {
 
         this.#service = new InteractionsService(this, config, config.bot.restOptions);
         this.rest = this.#service.rest;
-        this.bus = this.#service.bus;
         this.#endpoint = new NodeEndpoint(
             this.#service,
             this.#logger,

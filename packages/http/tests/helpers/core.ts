@@ -1,5 +1,4 @@
 import { REST } from '@discordjs/rest';
-import { Bus } from '@seedcord/core';
 import { PluginHost } from '@seedcord/core/plugin';
 import { validateDiscordToken } from '@seedcord/errors/internal';
 
@@ -10,7 +9,6 @@ import type { Core } from '#interfaces/Core';
 
 class TestCore extends PluginHost<'http', 'edge'> implements Core {
     public readonly rest: REST;
-    public readonly bus: Bus = new Bus(this);
     public readonly startup: Core['startup'] = { addTask: () => undefined };
     public readonly shutdown = edgeShutdown;
 

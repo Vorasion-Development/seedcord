@@ -29,7 +29,6 @@ import { edgeRestOptions, edgeShutdown } from './defaults';
 import type { HttpEdgeConfig } from '#interfaces/Config';
 import type { EngineContext } from '#src/engine';
 import type { REST } from '@discordjs/rest';
-import type { Bus } from '@seedcord/core';
 import type { StartupTasks, BakedIds } from '@seedcord/core/internal';
 import type { DevChannel, SeedcordCliEvents, SeedcordFrameworkEvents } from '@seedcord/types/internal';
 
@@ -63,9 +62,6 @@ export class Seedcord extends PluginHost<'http', 'edge'> {
 
     /** Discord REST client built from `bot.restOptions`, with both sweepers off. */
     public readonly rest: REST;
-
-    /** @see {@link Bus} */
-    public readonly bus: Bus;
 
     /**
      * @deprecated Cloudflare Workers don't provide a shutdown hook.
@@ -104,7 +100,6 @@ export class Seedcord extends PluginHost<'http', 'edge'> {
 
         this.#service = new InteractionsService(this, config, edgeRestOptions(config.bot.restOptions));
         this.rest = this.#service.rest;
-        this.bus = this.#service.bus;
 
         const cli = connectDevChannel();
         this.#readsBakedIds = !cli;

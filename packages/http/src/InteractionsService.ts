@@ -1,5 +1,4 @@
 import { REST } from '@discordjs/rest';
-import { Bus } from '@seedcord/core';
 import { interactionMiddleware, MiddlewareRegistry, readBotToken, SubscriberLoader } from '@seedcord/core/internal';
 import { SeedcordErrorCode } from '@seedcord/errors';
 import { SeedcordError } from '@seedcord/errors/internal';
@@ -17,7 +16,6 @@ import type { BotToken } from '@seedcord/errors/internal';
 
 export class InteractionsService {
     public readonly rest: REST;
-    public readonly bus: Bus;
     public readonly subscribers: SubscriberLoader;
     public readonly interactions: InteractionDispatcher | undefined;
 
@@ -30,8 +28,7 @@ export class InteractionsService {
         restOptions: Partial<RESTOptions> | undefined
     ) {
         this.rest = new REST(restOptions);
-        this.bus = new Bus(host);
-        this.subscribers = new SubscriberLoader(this.bus, config.subscribers.path);
+        this.subscribers = new SubscriberLoader(host.bus, config.subscribers.path);
 
         const interactions = config.bot.interactions;
         this.interactions = interactions.path

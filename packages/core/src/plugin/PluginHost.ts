@@ -6,12 +6,12 @@ import { HostPluginKeys } from '@seedcord/types/internal';
 import { Kv } from '#src/kv/Kv';
 import { MemoryDriver } from '#src/kv/MemoryDriver';
 import { KvRateLimiter } from '#src/rateLimiter/KvRateLimiter';
+import { Bus } from '#subscribers/Bus';
 
 import { constructAttached, declaredScopeOf, extendsThisCorePlugin, resolvedLifecycleSpecOf } from './Plugin';
 import { splitPluginKey } from './splitPluginKey';
 
 import type { CoreBase } from '#interfaces/CoreBase';
-import type { Bus } from '#subscribers/Bus';
 import type { ResolvedPluginLifecycleSpec } from './lifecycle';
 import type { DeclaredScope, Runtime, Transport } from './options';
 import type { AttachableCtor, Attached, AttachKeyAssert, PluginArgs, PluginCtor, PluginLike } from './Plugin';
@@ -34,8 +34,9 @@ export abstract class PluginHost<BotT extends Transport, BotRt extends Runtime> 
     public abstract readonly config: Config;
     public abstract readonly rest: REST;
     public abstract readonly applicationId: string;
-    public abstract readonly bus: Bus;
 
+    /** @see {@link Bus} */
+    public readonly bus: Bus;
     /** @see {@link Kv} */
     public readonly kv: Kv;
     /** @see {@link IRateLimiter} */
@@ -48,6 +49,7 @@ export abstract class PluginHost<BotT extends Transport, BotRt extends Runtime> 
 
     constructor(transport: BotT, runtime: BotRt, driver: Config['kv']) {
         this.#scope = { transport, runtime };
+        this.bus = new Bus(this);
         const kvDriver = driver ?? new MemoryDriver();
         this.kv = new Kv(kvDriver, 'app');
         this.rateLimiter = new KvRateLimiter(new Kv(kvDriver, 'seedcord'));

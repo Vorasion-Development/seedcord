@@ -1,4 +1,3 @@
-import { Bus } from '@seedcord/core';
 import {
     attachmentsOf,
     bindBotColor,
@@ -36,9 +35,6 @@ export class Seedcord extends ServerHost<'gateway'> implements SeedcordInstance 
     readonly #healthCheck?: HealthCheck | undefined;
     readonly #hmrManager: HmrManager;
 
-    /** @see {@link Bus} */
-    public readonly bus: Bus;
-
     readonly #subscribers: SubscriberLoader;
 
     /** @see {@link Bot} */
@@ -69,7 +65,6 @@ export class Seedcord extends ServerHost<'gateway'> implements SeedcordInstance 
 
         this.#hmrManager = new HmrManager();
         this.#hmrManager.init(connectDevChannel());
-        this.bus = new Bus(this);
         this.#subscribers = new SubscriberLoader(this.bus, config.subscribers.path);
         this.bot = new Bot(this);
         this.rest = this.bot.client.rest;
