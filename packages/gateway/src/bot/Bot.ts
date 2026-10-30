@@ -170,8 +170,7 @@ export class Bot implements HmrAware {
     async #login(token: string): Promise<Bot> {
         const ready: PromiseWithResolvers<void> = Promise.withResolvers();
         this.#client.once(Events.ClientReady, () => ready.resolve());
-        void this.#client.login(token);
-        await ready.promise;
+        await Promise.all([this.#client.login(token), ready.promise]);
         this.#logger.info(`Logged in as ${paint.sky.bold(this.#client.user?.username)}!`);
         return this;
     }

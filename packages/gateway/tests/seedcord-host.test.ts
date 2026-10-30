@@ -214,4 +214,18 @@ describe('Seedcord host', () => {
         expect(destroySpy).toHaveBeenCalled();
         vi.restoreAllMocks();
     });
+
+    it('fails the start right away when discord rejects the login', async () => {
+        const seedcord = new Seedcord(testConfig());
+        const { client } = seedcord.bot;
+        vi.spyOn(seedcord.bot, 'botToken', 'get').mockReturnValue('token');
+        // what discord.js rejects with after a 4014 close
+        vi.spyOn(client, 'login').mockRejectedValue(new Error('Used disallowed intents'));
+        vi.spyOn(client, 'destroy').mockResolvedValue(undefined);
+
+        const error: unknown = await seedcord.start().catch((caught: unknown) => caught);
+
+        expect(error).toMatchObject({ errors: [{ message: 'Used disallowed intents' }] });
+        vi.restoreAllMocks();
+    });
 });

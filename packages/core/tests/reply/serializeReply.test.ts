@@ -39,6 +39,12 @@ describe('serializeReply', () => {
         expect(result.components[1]).toMatchObject({ content: 'b' });
     });
 
+    it('passes raw component json through next to builders', () => {
+        const raw = { type: ComponentType.TextDisplay, content: 'raw' } as const;
+        const result = serializeReply({ components: [raw, new TextDisplayBuilder().setContent('built')] }, ROUTE);
+        expect(result.components).toEqual([raw, { type: ComponentType.TextDisplay, content: 'built' }]);
+    });
+
     it('carries allowedMentions and files through untouched', () => {
         const response: ReplyResponse = {
             components: [new TextDisplayBuilder().setContent('a')],
@@ -85,6 +91,12 @@ describe('serializeReply', () => {
         const message = captureMessage(() => serializeReply({ components: [boom] }, ROUTE));
         expect(message).toContain('component at components[0]');
         expect(message).toContain('bad component');
+    });
+
+    it.each([false, null, undefined])('translates a %s component from untyped code', (value) => {
+        // justified: plain js can put `cond && builder` or a missing value in the array, which is what this pins
+        const response = { components: [value] } as unknown as ReplyResponse;
+        expect(captureMessage(() => serializeReply(response, ROUTE))).toContain('components[0]');
     });
 
     it('labels a plain object component as component, keeping its throw message', () => {

@@ -44,6 +44,7 @@ interface HotkeyContext {
     readonly onQuit?: (() => Promise<void> | void) | undefined;
     readonly onDisconnect?: (() => Promise<void> | void) | undefined;
     readonly onRestart?: (() => Promise<void> | void) | undefined;
+    readonly onCodegen?: (() => void) | undefined;
     readonly onRefreshCommands?: ((shouldRefresh: boolean) => Promise<void> | void) | undefined;
 }
 
@@ -103,6 +104,7 @@ const disconnect: Action = (ctx) => {
     void ctx.onDisconnect?.();
 };
 const restart: Action = (ctx) => void ctx.onRestart?.();
+const codegen: Action = (ctx) => ctx.onCodegen?.();
 const clearLogs: Action = (ctx) => {
     LogStore.instance.clear();
     ctx.scroll.toBottom();
@@ -141,6 +143,7 @@ const KEYMAP = {
     end: { run: toBottom },
     q: { run: quit },
     r: { when: sessionOpen, run: restart },
+    g: { when: sessionOpen, run: codegen },
     d: { when: canDisconnect, run: disconnect },
     c: { when: sessionOpen, run: clearLogs }
 } satisfies Record<string, Binding>;
@@ -169,7 +172,7 @@ function isLive(binding: Binding, gate: KeyGate): boolean {
     return binding.when?.(gate) ?? true;
 }
 
-export function sessionKeyIsLive(id: 'r' | 'd' | 'c', gate: SessionGate): boolean {
+export function sessionKeyIsLive(id: 'r' | 'g' | 'd' | 'c', gate: SessionGate): boolean {
     return KEYMAP[id].when(gate);
 }
 

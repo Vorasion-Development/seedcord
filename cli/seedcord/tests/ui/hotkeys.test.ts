@@ -82,7 +82,7 @@ describe('session keys while the bot starts', () => {
         expect(onDisconnect).toHaveBeenCalledOnce();
     });
 
-    it('holds r, d and c while a prompt waits for y or n, and leaves every other key working', () => {
+    it('holds r, d, c and g while a prompt waits for y or n, and leaves every other key working', () => {
         const store = new DevStore();
         store.setPhase('running');
         store.apply({ type: 'command-update-prompt', files: ['a.ts'] });
@@ -90,10 +90,20 @@ describe('session keys while the bot starts', () => {
         const onDisconnect = vi.fn();
         const onQuit = vi.fn();
         const onRefreshCommands = vi.fn();
+        const onCodegen = vi.fn();
         const scroll = scrollSpy();
-        const ctx = { state: store.getState(), store, scroll, onRestart, onDisconnect, onQuit, onRefreshCommands };
+        const ctx = {
+            state: store.getState(),
+            store,
+            scroll,
+            onRestart,
+            onDisconnect,
+            onQuit,
+            onRefreshCommands,
+            onCodegen
+        };
 
-        for (const input of ['r', 'd', 'c']) dispatchHotkey(makeCtx({ ...ctx, input }));
+        for (const input of ['r', 'd', 'c', 'g']) dispatchHotkey(makeCtx({ ...ctx, input }));
         dispatchHotkey(makeCtx({ ...ctx, input: 'd', key: key({ ctrl: true }) }));
         expect(store.getState().armed).toBeNull();
         dispatchHotkey(makeCtx({ ...ctx, input: 't' }));
@@ -102,6 +112,7 @@ describe('session keys while the bot starts', () => {
 
         expect(onRestart).not.toHaveBeenCalled();
         expect(onDisconnect).not.toHaveBeenCalled();
+        expect(onCodegen).not.toHaveBeenCalled();
         expect(scroll.toBottom).not.toHaveBeenCalled();
         expect(scroll.toTop).toHaveBeenCalledOnce();
         expect(onRefreshCommands).toHaveBeenCalledWith(true);
@@ -246,12 +257,15 @@ describe('scrolling alongside the filters', () => {
         const store = { beginRestart: vi.fn(), beginQuit: vi.fn() } as unknown as Ctx['store'];
         const onRestart = vi.fn();
         const onQuit = vi.fn();
+        const onCodegen = vi.fn();
 
         dispatchHotkey(makeCtx({ input: 'r', store, onRestart, scroll: scrollSpy() }));
         dispatchHotkey(makeCtx({ input: 'q', store, onQuit, scroll: scrollSpy() }));
+        dispatchHotkey(makeCtx({ input: 'g', store, onCodegen, scroll: scrollSpy() }));
 
         expect(onRestart).toHaveBeenCalledOnce();
         expect(onQuit).toHaveBeenCalledOnce();
+        expect(onCodegen).toHaveBeenCalledOnce();
     });
 });
 

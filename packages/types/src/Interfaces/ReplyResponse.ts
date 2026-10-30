@@ -49,8 +49,8 @@ export interface ReplyFile {
  * {@link ReplyFile} alone assigns to either transport.
  */
 export interface ReplyResponse<TNative = never> {
-    /** The component tree the reply renders from. */
-    readonly components: V2Component[];
+    /** The component tree the reply renders from, as builders or as the raw json Discord's API takes. */
+    readonly components: (V2Component | APIMessageTopLevelComponent)[];
     /** Which mentions written inside the components resolve into real pings. */
     readonly allowedMentions?: ReplyAllowedMentions;
     /** Attachments to upload. Under v2 each must be referenced by a thumbnail, media gallery, or file component, or it uploads hidden. */

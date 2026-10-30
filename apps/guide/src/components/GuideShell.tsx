@@ -4,6 +4,7 @@ import {
     Button,
     GithubIcon,
     Icon,
+    MAIN_CONTENT_ID,
     MobileNavButton,
     MobilePanel,
     Navbar,
@@ -99,6 +100,8 @@ const contentsColumnClassName = tw`sticky top-(--nav-h) hidden max-h-[calc(100dv
 // a ghost row spans the column with its icon on the left edge
 const ghostRow = tw`-ms-(--ghost-row-pull) self-stretch`;
 
+const mainClassName = tw`min-w-0 flex-1 scroll-mt-(--nav-h) pt-10 pb-(--jump-clearance) lg:pb-10`;
+
 function ContentsColumn({
     items,
     actions
@@ -181,7 +184,7 @@ export function GuideShell({
                             />
                         ) : null}
                         {/* below lg the floating button would cover PageNav */}
-                        <main id="main-content" className={cn('min-w-0 flex-1 pt-10 pb-(--jump-clearance) lg:pb-10')}>
+                        <main id={MAIN_CONTENT_ID} className={cn(mainClassName)}>
                             {children}
                         </main>
                         {hasContents ? <ContentsColumn items={toc} actions={actions} /> : null}

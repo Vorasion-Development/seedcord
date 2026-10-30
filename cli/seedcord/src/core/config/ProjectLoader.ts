@@ -1,5 +1,7 @@
 import { dirname, resolve } from 'node:path';
 
+import { setCliFiles } from '@seedcord/utils/internal';
+
 import { Project } from '#core/project/Project';
 import { ProjectFiles } from '#core/project/ProjectFiles';
 import { realPath } from '#core/project/realPath';
@@ -81,6 +83,7 @@ export class ProjectLoader {
         await using stack = new AsyncDisposableStack();
         stack.use(loaded);
         const { config, files } = loaded;
+        stack.use(setCliFiles(files.layout.toJSON()));
         const botModules = await this.openModules(
             dirname(config.configFile),
             config.target,
@@ -119,7 +122,11 @@ export class ProjectLoader {
             viteMode: mode,
             tunnel: resolveTunnel(config.tunnel),
             hmr: config.hmr,
-            vitePlugins: new VitePlugins(config.vitePlugins, configPath)
+            vitePlugins: new VitePlugins(config.vitePlugins, configPath),
+            make: {
+                templates: realPathUnder(configDir, config.make?.templates ?? 'templates'),
+                helpers: config.make?.helpers ?? {}
+            }
         } satisfies ResolvedSeedcordConfig;
     }
 

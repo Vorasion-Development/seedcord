@@ -10,8 +10,19 @@ import type { KyselyServices } from './types/KyselyServices';
 import type { CoreBase } from '@seedcord/core';
 import type { Logger } from '@seedcord/logger';
 
+interface FoundService {
+    readonly key: string;
+    readonly fullPath: string;
+    readonly relativePath: string;
+    readonly Service: KyselyServiceConstructor;
+}
+
+function serviceKeyOf(Service: KyselyServiceConstructor): string | undefined {
+    const key: unknown = Reflect.getMetadata(KyselyServiceMetadataKey, Service);
+    return typeof key === 'string' ? key : undefined;
+}
+
 export class KyselyServiceRegistry {
-    // the augmented interface has no index signature, hence Reflect below
     private readonly services = Object.create(null) as KyselyServices;
 
     constructor(
@@ -32,17 +43,23 @@ export class KyselyServiceRegistry {
         for (const key of Object.keys(this.services)) Reflect.deleteProperty(this.services, key);
     }
 
-    public async loadFromDirectory(dir: string): Promise<void> {
-        this.logger.debug(paint.mute(dir));
-
+    public async *serviceClassesIn(dir: string): AsyncGenerator<FoundService> {
         for await (const { fullPath, relativePath, imported } of importFiles(dir)) {
             for (const Service of Object.values(imported)) {
                 if (!this.isServiceClass(Service)) continue;
-
-                this.initializeService(Service);
-                this.logger.utils.registration(Service.name, relativePath, undefined, 'trace');
-                this.plugin.trackServiceFile(fullPath, Service);
+                const key = serviceKeyOf(Service);
+                if (key !== undefined) yield { key, fullPath, relativePath, Service };
             }
+        }
+    }
+
+    public async loadFromDirectory(dir: string): Promise<void> {
+        this.logger.debug(paint.mute(dir));
+
+        for await (const { fullPath, relativePath, Service } of this.serviceClassesIn(dir)) {
+            this.initializeService(Service);
+            this.logger.utils.registration(Service.name, relativePath, undefined, 'trace');
+            this.plugin.trackServiceFile(fullPath, Service);
         }
 
         this.logger.utils.list(
@@ -53,10 +70,8 @@ export class KyselyServiceRegistry {
     }
 
     public unregister(Service: KyselyServiceConstructor, artifacts?: KyselyArtifact): void {
-        const key = artifacts?.key ?? (Reflect.getMetadata(KyselyServiceMetadataKey, Service) as string | undefined);
-        if (key && Reflect.get(this.services, key)) {
-            Reflect.deleteProperty(this.services, key);
-        }
+        const key = artifacts?.key ?? serviceKeyOf(Service);
+        if (key) Reflect.deleteProperty(this.services, key);
     }
 
     public initializeService(Service: KyselyServiceConstructor): void {

@@ -1,6 +1,6 @@
 import { ContainerBuilder } from '@discordjs/builders';
 import { DispatchContext } from '@seedcord/core';
-import { PublishDefault } from '@seedcord/core/internal';
+import { PublishDefault, serializeReply } from '@seedcord/core/internal';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getConfirmation } from '#bot/confirm';
@@ -60,7 +60,7 @@ function winner(customId: string, userId = 'u1') {
 const v2Prompt = (): ReplyResponse => ({ components: [new ContainerBuilder()] });
 const outcomeCard: ReplyResponse = { components: [new ContainerBuilder()] };
 // the sender serializes each component to raw API data before the wire call
-const outcomeComponents = outcomeCard.components.map((c) => c.toJSON());
+const outcomeComponents = serializeReply(outcomeCard, 'test').components;
 
 describe('getConfirmation', () => {
     let event: ReturnType<typeof mockEvent>;

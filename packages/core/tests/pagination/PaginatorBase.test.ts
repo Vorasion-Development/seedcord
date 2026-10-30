@@ -4,9 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { PaginatorBase } from '#pagination/PaginatorBase';
 import { ArraySourceBase } from '#pagination/sources';
 
+import { containerOf, textLines } from './pageJson';
+
 import type { PaginatorConfig } from '#pagination/PaginatorBase';
 import type { ReplyResponse } from '@seedcord/types';
-import type { APIComponentInContainer, APIContainerComponent } from 'discord-api-types/v10';
 
 interface TestCtx {
     readonly tag: string;
@@ -22,18 +23,6 @@ class TestPaginator<Item> extends PaginatorBase<Item, 'test', TestCtx> {
     public page(ctx: TestCtx, n: number): Promise<ReplyResponse> {
         return this.buildPage(ctx, n);
     }
-}
-
-function containerOf(reply: ReplyResponse): APIContainerComponent {
-    const json = reply.components[0]?.toJSON();
-    if (json?.type !== ComponentType.Container) throw new Error('expected a container');
-    return json;
-}
-function textLines(container: APIContainerComponent): string[] {
-    return container.components.reduce<string[]>((acc, part: APIComponentInContainer) => {
-        if (part.type === ComponentType.TextDisplay) acc.push(part.content);
-        return acc;
-    }, []);
 }
 
 const letters = ['a', 'b', 'c', 'd', 'e'];

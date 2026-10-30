@@ -56,7 +56,7 @@ The top stack ends at `Ban.ts:7`, the second `reply()`. The `AckTrace` under it 
 
 ## A component that fails to serialize
 
-seedcord calls `toJSON()` on every component in your reply, and discord.js validates the builder there. Its own throw is a nested shapeshift error, which doesn't say which entry in `components` failed. seedcord catches it and rewrites it as one line with the class, its index in `components`, and what went wrong.
+seedcord calls `toJSON()` on every builder in your reply, and discord.js validates the builder there. Its own throw is a nested shapeshift error, which doesn't say which entry in `components` failed. seedcord catches it and rewrites it as one line with the class, its index in `components`, and what went wrong.
 
 ```ts twoslash title="src/handlers/Ban.ts"
 import {

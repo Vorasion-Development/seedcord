@@ -17,6 +17,7 @@ import { Vite } from '#components/home/Vite';
 import { SlashCommand } from '#components/SlashCommand';
 import { FEATURES } from '#lib/features';
 import { HOME_PREVIEW } from '#lib/linkPreview';
+import { MAIN_CONTENT_ID } from '@seedcord/ui';
 import { PreviewCard } from '@seedcord/ui/LinkPreview';
 import { ComponentEmbed } from 'discord-component-embed/react';
 
@@ -29,7 +30,7 @@ function Home(): ReactNode {
                 <PreviewCard {...HOME_PREVIEW} />
             </ComponentEmbed>
             <Nav />
-            <main id="main-content">
+            <main id={MAIN_CONTENT_ID}>
                 <Hero />
                 <FeatureMarquee items={FEATURES} />
                 <TypedDx />

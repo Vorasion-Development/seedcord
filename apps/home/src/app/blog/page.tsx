@@ -1,4 +1,4 @@
-import { cn, serializeJsonLd } from '@seedcord/ui';
+import { cn, MAIN_CONTENT_ID, serializeJsonLd } from '@seedcord/ui';
 import { PreviewCard } from '@seedcord/ui/LinkPreview';
 import { ComponentEmbed } from 'discord-component-embed/react';
 import { Rss } from 'lucide-react';
@@ -70,7 +70,7 @@ export default async function BlogPage(): Promise<ReactNode> {
                 dangerouslySetInnerHTML={{ __html: serializeJsonLd(blogJsonLd(posts)) }}
             />
             <Nav onBlogIndex />
-            <main id="main-content">
+            <main id={MAIN_CONTENT_ID}>
                 <Section ground="pith">
                     <div className={cn('grid grid-cols-[1fr_auto] gap-x-6')}>
                         <h1 className={cn(SECTION_HEADING_LG)}>

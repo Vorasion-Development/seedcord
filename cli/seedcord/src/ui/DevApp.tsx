@@ -32,6 +32,7 @@ interface DevAppProps {
     readonly onQuit?: () => Promise<void> | void;
     readonly onDisconnect?: () => Promise<void> | void;
     readonly onRestart?: () => Promise<void> | void;
+    readonly onCodegen?: () => void;
     readonly onRefreshCommands?: (shouldRefresh: boolean) => Promise<void> | void;
 }
 
@@ -85,6 +86,7 @@ export function DevApp(props: DevAppProps): ReactElement {
             onQuit: props.onQuit,
             onDisconnect: props.onDisconnect,
             onRestart: props.onRestart,
+            onCodegen: props.onCodegen,
             onRefreshCommands: props.onRefreshCommands
         });
     });

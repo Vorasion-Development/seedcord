@@ -3,7 +3,8 @@ import {
     ComponentDefsKey,
     InteractionMetadataKey,
     InteractionRouteKeys,
-    PublishDefault
+    PublishDefault,
+    serializeReply
 } from '@seedcord/core/internal';
 import { ComponentType, MessageFlags } from 'discord.js';
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
@@ -107,16 +108,8 @@ function asButton(event: ReturnType<typeof navEvent>): ButtonInteraction<'cached
     return event as unknown as ButtonInteraction<'cached'>;
 }
 
-function containerText(components: { toJSON(): unknown }[]): string {
-    const json = components[0]?.toJSON() as APIContainerComponent;
-    return json.components.reduce<string>(
-        (acc, part) => (part.type === ComponentType.TextDisplay ? acc + part.content : acc),
-        ''
-    );
-}
-
 // the sender serializes each component before the wire call, so sent components arrive as raw API data
-function sentContainerText(components: unknown[]): string {
+function containerText(components: unknown[]): string {
     const json = components[0] as APIContainerComponent;
     return json.components.reduce<string>(
         (acc, part) => (part.type === ComponentType.TextDisplay ? acc + part.content : acc),
@@ -149,7 +142,7 @@ describe('Paginator.start', () => {
         const options = event.reply.mock.calls[0]?.[0] as { components: unknown[]; flags: number };
         expect(options.flags & MessageFlags.IsComponentsV2).toBeTruthy();
         expect(options.flags & MessageFlags.Ephemeral).toBeFalsy();
-        expect(sentContainerText(options.components)).toBe('a\nb');
+        expect(containerText(options.components)).toBe('a\nb');
     });
 
     it('rejects when the page-0 send fails', async () => {
@@ -165,7 +158,7 @@ describe('Paginator.start', () => {
         await pager.start(stubHandler(event), 2);
 
         const options = event.reply.mock.calls[0]?.[0] as { components: unknown[] };
-        expect(sentContainerText(options.components)).toBe('e');
+        expect(containerText(options.components)).toBe('e');
     });
 
     it('honors an ephemeral paginator', async () => {
@@ -187,7 +180,7 @@ describe('Paginator.page', () => {
         const event = startEvent();
         const reply = await pager.page(stubHandler(event), 1);
 
-        expect(containerText(reply.components)).toBe('c\nd');
+        expect(containerText(serializeReply(reply, 'test').components)).toBe('c\nd');
         expect(event.reply).not.toHaveBeenCalled();
     });
 });
@@ -215,7 +208,7 @@ describe('Paginator custom source', () => {
         await custom.start(stubHandler(event), 3);
 
         const options = event.reply.mock.calls[0]?.[0] as { components: unknown[] };
-        expect(sentContainerText(options.components)).toBe('d');
+        expect(containerText(options.components)).toBe('d');
     });
 });
 
@@ -232,7 +225,7 @@ describe('Paginator nav handler', () => {
         expect(event.webhook.editMessage).not.toHaveBeenCalled();
         const body = event.editReply.mock.calls[0]?.[0] as { components: unknown[]; flags: number };
         expect(body.flags).toBe(MessageFlags.IsComponentsV2);
-        expect(sentContainerText(body.components)).toBe('e'); // page 2 of 5 items at perPage 2
+        expect(containerText(body.components)).toBe('e'); // page 2 of 5 items at perPage 2
     });
 });
 

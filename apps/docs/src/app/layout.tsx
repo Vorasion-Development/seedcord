@@ -1,4 +1,4 @@
-import { AgentLinks, DOCS, ThemeProvider, TooltipProvider, cn, seedcordJsonLd } from '@seedcord/ui';
+import { AgentLinks, DOCS, SkipLink, ThemeProvider, TooltipProvider, cn, seedcordJsonLd } from '@seedcord/ui';
 import { FAVICON_SIZE } from '@seedcord/ui/MaterwelonFavicon';
 import { ogPageCardAlt } from '@seedcord/ui/OgCard';
 import { Space_Grotesk } from 'next/font/google';
@@ -121,14 +121,7 @@ function RootLayout({ children }: RootLayoutProps): ReactNode {
                         <TooltipProvider>
                             <HotkeyProvider>
                                 <CommandPalette />
-                                <a
-                                    href="#main-content"
-                                    className={cn(
-                                        'fixed top-4 left-6 z-60 -translate-y-20 transform rounded-full bg-(--rind) px-4 py-2 text-sm font-semibold text-black transition focus-visible:translate-y-0'
-                                    )}
-                                >
-                                    Skip to content
-                                </a>
+                                <SkipLink />
                                 <div className={cn('flex min-h-screen flex-col')}>
                                     <Navbar />
                                     <div className={cn('flex-1 pt-(--nav-h)')}>{children}</div>

@@ -7,9 +7,11 @@ import { BuilderComponent } from '#components/Component';
 import { pageCursor } from '#pagination/cursor';
 import { renderPage } from '#pagination/render';
 
+import { containerOf, firstJson, textLines } from './pageJson';
+
 import type { PageView } from '#pagination/PageView';
 import type { ReplyResponse } from '@seedcord/types';
-import type { APIComponentInContainer, APIContainerComponent } from 'discord-api-types/v10';
+import type { APIContainerComponent } from 'discord-api-types/v10';
 
 const cursor = pageCursor('roles');
 const accessoryId = new CustomId('go').str('text');
@@ -18,17 +20,6 @@ function arrayView<Item>(items: Item[], page: number, totalPages: number): PageV
     return { items, page, perPage: 2, totalPages, hasPrev: page > 0, hasNext: page < totalPages - 1 };
 }
 
-function containerOf(reply: ReplyResponse): APIContainerComponent {
-    const json = reply.components[0]?.toJSON();
-    if (json?.type !== ComponentType.Container) throw new Error('expected a container');
-    return json;
-}
-function textLines(container: APIContainerComponent): string[] {
-    return container.components.reduce<string[]>((acc, part: APIComponentInContainer) => {
-        if (part.type === ComponentType.TextDisplay) acc.push(part.content);
-        return acc;
-    }, []);
-}
 function rowButtonCount(container: APIContainerComponent): number {
     const row = container.components.find((part) => part.type === ComponentType.ActionRow);
     return row?.type === ComponentType.ActionRow ? row.components.length : 0;
@@ -89,14 +80,14 @@ describe('renderPage render override', () => {
         const reply = renderPage(arrayView(['a'], 0, 1), cursor, {
             render: (_view, controls) => [new TextDisplayBuilder().setContent('custom'), controls.row('prev', 'next')]
         });
-        const first = reply.components[0]?.toJSON();
+        const first = firstJson(reply);
         expect(first?.type).toBe(ComponentType.TextDisplay);
         expect(reply.components).toHaveLength(2);
     });
 
     it('wraps a returned string in a text display', () => {
         const reply = renderPage(arrayView(['a'], 0, 1), cursor, { render: () => 'just text' });
-        const first = reply.components[0]?.toJSON();
+        const first = firstJson(reply);
         expect(first?.type).toBe(ComponentType.TextDisplay);
         expect(first && 'content' in first ? first.content : '').toBe('just text');
     });

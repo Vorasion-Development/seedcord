@@ -1,6 +1,6 @@
 import { APPLE_ICON_SIZE, FAVICON_SIZE } from '@seedcord/ui/MaterwelonFavicon';
 import { BRAND } from '@seedcord/ui/palette';
-import { AgentLinks, GUIDE, MotionProvider, ThemeProvider, cn, seedcordJsonLd } from '@seedcord/ui';
+import { AgentLinks, GUIDE, MotionProvider, SkipLink, ThemeProvider, cn, seedcordJsonLd } from '@seedcord/ui';
 import { Space_Grotesk } from 'next/font/google';
 
 import './globals.css';
@@ -51,15 +51,7 @@ function RootLayout({ children }: RootLayoutProps): ReactNode {
                 <AgentLinks site="guide" />
                 <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
                 <ThemeProvider>
-                    {/* apps/docs repeats this class string, change both */}
-                    <a
-                        href="#main-content"
-                        className={cn(
-                            'fixed top-4 left-6 z-60 -translate-y-20 transform rounded-full bg-(--rind) px-4 py-2 text-sm font-semibold text-black transition focus-visible:translate-y-0'
-                        )}
-                    >
-                        Skip to content
-                    </a>
+                    <SkipLink />
                     <MotionProvider>{children}</MotionProvider>
                 </ThemeProvider>
             </body>

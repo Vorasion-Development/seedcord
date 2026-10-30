@@ -13,14 +13,14 @@ import { onTestFinished, vi } from 'vitest';
 import { Project } from '#core/project/Project';
 import { realPath } from '#core/project/realPath';
 import { StateFolder } from '#core/state/StateFolder';
+import { emptyModuleGraph } from '#tests/emptyModuleGraph';
 import { loadedConfig } from '#tests/loadedConfig';
+import { resolvedConfigOf } from '#tests/resolvedConfigOf';
 import { silentLogger } from '#tests/silentLogger';
-import { vitePluginsOf } from '#tests/vitePluginsOf';
 
 import type { RemoveDeps } from '#commands/commands/remove/RemoveRunner';
 import type { DiscordRest } from '#commands/commands/runnerDeps';
 import type { ProjectOpener } from '#core/config/openProjectWithSteps';
-import type { ResolvedSeedcordConfig } from '#core/config/schema';
 import type { ModuleLoader } from '#core/modules/ModuleLoader';
 import type { Terminal } from '#core/output/terminal';
 import type { CommandBody } from '@seedcord/core/internal';
@@ -105,10 +105,9 @@ export async function fakeProject({
         default: { [SeedcordBrand]: true, rest, config: { bot: { commands: { path: commandsPath, guilds } } } }
     });
 
-    const config: ResolvedSeedcordConfig = {
+    const config = resolvedConfigOf(root, {
         root,
         instance: realPath(instance),
-        configFile: realPath(resolve(root, 'seedcord.config.ts')),
         target: edge
             ? {
                   kind: 'edge',
@@ -117,14 +116,9 @@ export async function fakeProject({
                   port: 0
               }
             : { kind: 'server', start: realPath(resolve(root, 'index.ts')), outDir: realPath(resolve(root, 'dist')) },
-        build: {},
-        files: [],
-        typecheck: { enabled: false },
         idleAnimation: false,
-        tunnel: { mode: 'off' },
-        viteMode: 'development',
-        vitePlugins: vitePluginsOf()
-    };
+        tunnel: { mode: 'off' }
+    });
     return {
         readConfig: () => Promise.resolve(loadedConfig(config)),
         openProject: (loaded) => Promise.resolve(new Project(loaded.config, loaded.files, moduleLoader(byPath))),
@@ -142,6 +136,7 @@ function moduleLoader(byPath: ReadonlyMap<string, Record<string, unknown>>): Mod
             if (closed) throw new Error('the module runner closed during the import');
             return byPath.get(path) ?? {};
         },
+        ...emptyModuleGraph,
         [Symbol.asyncDispose]: () => {
             closed = true;
             return Promise.resolve();

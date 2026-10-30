@@ -303,6 +303,14 @@ export enum SeedcordErrorCode {
     CliDevAlreadyRunning = 3141,
     /** The folder that holds the dev session locks belongs to another user. */
     CliDevLockFolderNotOwned = 3142,
+    /** A plugin's `codegen()` threw. */
+    CliPluginCodegenThrew = 3143,
+    /** A plugin class with a `codegen()` is missing its `static readonly id`. */
+    CliPluginCodegenNoId = 3144,
+    /** A plugin's `codegen()` returned a value that codegen can't write as a type. */
+    CliPluginCodegenValue = 3145,
+    /** Two attachments of one plugin class returned different values at one key from `codegen()`. */
+    CliPluginCodegenConflict = 3146,
 
     /** A flag answers a question that the earlier answers skip. */
     CreateFlagNotApplicable = 3201,
@@ -313,5 +321,24 @@ export enum SeedcordErrorCode {
     /** The target path already has files in it. */
     CreateTargetNotEmpty = 3204,
     /** A command that create-seedcord ran exited non-zero. */
-    CreateStepFailed = 3205
+    CreateStepFailed = 3205,
+
+    /** The name given to `seedcord make` can't become a file name. */
+    MakeInvalidName = 3301,
+    /** A template calls `importOf` on a folder that doesn't hold exactly one template file. */
+    MakeImportOfUnmatched = 3302,
+    /** A template uses one value as two of text, a list, and an entry with fields. */
+    MakeValueUsedTwoWays = 3303,
+    /** Handlebars could not parse or render a template file. */
+    MakeTemplateFailed = 3304,
+    /** A template calls `lookup` with a key that isn't quoted text. */
+    MakeLookupDynamicKey = 3305,
+    /** `seedcord make` ran without a terminal to ask its questions in. */
+    MakeNeedsTerminal = 3306,
+    /** `seedcord make` found no templates in the bot or its plugins. */
+    MakeNoTemplates = 3307,
+    /** A path `seedcord make` would write to is taken, by a file on disk or by another file of the same template. */
+    MakePathTaken = 3308,
+    /** A template's partial calls itself, so `seedcord make` can't tell how many levels to ask for. */
+    MakePartialCallsItself = 3309
 }

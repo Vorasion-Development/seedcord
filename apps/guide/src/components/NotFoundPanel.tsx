@@ -1,4 +1,4 @@
-import { cn, DOCS, HOME } from '@seedcord/ui';
+import { cn, DOCS, HOME, MAIN_CONTENT_ID } from '@seedcord/ui';
 import { Materwelon } from '@seedcord/ui/Materwelon';
 import Link from 'next/link';
 
@@ -15,7 +15,7 @@ const LINKS = [
 export function NotFoundPanel(): ReactNode {
     return (
         <main
-            id="main-content"
+            id={MAIN_CONTENT_ID}
             className={cn(
                 'flex min-h-screen flex-col items-center justify-center gap-6 bg-(--pith) px-5 py-20 text-center'
             )}

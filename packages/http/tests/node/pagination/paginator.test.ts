@@ -1,4 +1,5 @@
 import { DispatchContext } from '@seedcord/core';
+import { serializeReply } from '@seedcord/core/internal';
 import { ComponentType, InteractionResponseType, MessageFlags } from 'discord-api-types/v10';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
@@ -148,7 +149,7 @@ describe('http Paginator.page', () => {
 
         const reply = await pagerFor().page(stubHandler(post), 1);
 
-        expect(textLines(reply.components[0]?.toJSON() as APIContainerComponent)).toEqual(['c\nd']);
+        expect(textLines(serializeReply(reply, 'test').components[0] as APIContainerComponent)).toEqual(['c\nd']);
         expect(post).not.toHaveBeenCalled();
     });
 });

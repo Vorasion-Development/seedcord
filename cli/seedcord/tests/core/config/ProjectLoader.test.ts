@@ -2,7 +2,7 @@ import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 import { SeedcordErrorCode, isSeedcordError } from '@seedcord/errors';
-import { toPosixPath } from '@seedcord/utils/internal';
+import { botFolder, toPosixPath } from '@seedcord/utils/internal';
 import { assert, describe, it, expect, onTestFinished, vi } from 'vitest';
 
 import { ProjectLoader } from '#core/config/ProjectLoader';
@@ -239,6 +239,42 @@ describe('ProjectLoader on an edge bot', () => {
     });
 });
 
+describe('ProjectLoader make', () => {
+    it('reads templates from ./templates beside the config with no helpers by default', async () => {
+        const { projectDir, load } = projectWith(MINIMAL);
+
+        const { make } = await load();
+
+        expect(make).toEqual({ templates: resolve(projectDir, 'templates'), helpers: {} });
+    });
+
+    it('resolves make.templates against the config folder and keeps make.helpers', async () => {
+        const shout = (value: string): string => value.toUpperCase();
+        const { projectDir, load } = projectWith({ ...MINIMAL, make: { templates: './tpl', helpers: { shout } } });
+
+        const { make } = await load();
+
+        expect(make).toEqual({ templates: resolve(projectDir, 'tpl'), helpers: { shout } });
+    });
+
+    it.each([
+        ['make', 'templates'],
+        ['make.templates', { templates: 3 }],
+        ['make.helpers', { helpers: 'shout' }],
+        ['make.helpers.shout', { helpers: { shout: 'loud' } }],
+        ['make.helpers.pascal', { helpers: { pascal: (text: string) => text } }],
+        ['make.helpers.name', { helpers: { name: (text: string) => text } }],
+        ['make.helpers.each', { helpers: { each: (text: string) => text } }]
+    ])('throws CliConfigInvalidField naming %s for a malformed make', async (field, make) => {
+        const { load } = projectWith({ ...MINIMAL, make });
+
+        await expect(load()).rejects.toMatchObject({
+            code: SeedcordErrorCode.CliConfigInvalidField,
+            message: expect.stringContaining(field) as string
+        });
+    });
+});
+
 describe('ProjectLoader paths with a #', () => {
     it('throws CliPathHasHash for a file under root whose name contains a #', async () => {
         const { projectDir, load } = projectWith(MINIMAL);
@@ -307,7 +343,7 @@ describe('ProjectLoader validation', () => {
         expect(modules.loaders).toEqual([{ loads: 'config', closed: true }]);
     });
 
-    it('closes the config loader once the project opens, and the bot loader with the project', async () => {
+    it('closes the config loader once the project opens, and the bot loader and root with the project', async () => {
         const projectDir = tempProject();
         writeFileSync(join(projectDir, 'seedcord.config.ts'), '');
         const modules = stubModulesExporting(MINIMAL);
@@ -319,12 +355,16 @@ describe('ProjectLoader validation', () => {
                 { loads: 'bot', closed: false }
             ]);
             expect(project.config.instance).toBe(resolve(projectDir, 'bot.ts'));
+            expect(() => botFolder('.')).not.toThrow();
         }
 
         expect(modules.loaders).toEqual([
             { loads: 'config', closed: true },
             { loads: 'bot', closed: true }
         ]);
+        expect(() => botFolder('.')).toThrow(
+            expect.objectContaining({ code: SeedcordErrorCode.CoreDirectoryRootUnknown })
+        );
     });
 
     it('resolves each tunnel shape into a mode', async () => {

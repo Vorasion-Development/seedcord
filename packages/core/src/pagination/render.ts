@@ -7,12 +7,12 @@ import type { ControlKey, PaginatorControls } from '#pagination/Controls';
 import type { PageCursor } from '#pagination/cursor';
 import type { PageView } from '#pagination/PageView';
 import type { ButtonBuilder, ActionRowBuilder } from '@discordjs/builders';
-import type { ReplyResponse, V2Component } from '@seedcord/types';
+import type { ReplyResponse } from '@seedcord/types';
 
 /** What `renderItem` returns for one item, a text line or a section. */
 export type ItemRender<Item> = (item: Item, index: number) => string | BuilderComponent<'section'>;
 
-type Renderable = string | V2Component[] | ReplyResponse;
+type Renderable = string | ReplyResponse['components'] | ReplyResponse;
 
 /** A full-page render override. */
 export type PageRender<Item> = (view: PageView<Item>, controls: PaginatorControls) => Renderable;

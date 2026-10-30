@@ -1,7 +1,7 @@
 /* eslint-disable max-lines -- one suite per sender, splitting fragments the shared rest mock and body fixtures */
 import { TextDisplayBuilder } from '@discordjs/builders';
 import { DispatchContext } from '@seedcord/core';
-import { AckTrace } from '@seedcord/core/internal';
+import { AckTrace, serializeReply } from '@seedcord/core/internal';
 import { isSeedcordError, SeedcordErrorCode } from '@seedcord/errors';
 import { MessageFlags } from 'discord-api-types/v10';
 import { describe, expect, it, vi } from 'vitest';
@@ -50,7 +50,7 @@ function senderFor(rest: RestMock): ReplySender {
 }
 
 const reply: ReplyResponse = { components: [new TextDisplayBuilder().setContent('hi')] };
-const serialized = reply.components.map((c) => c.toJSON());
+const serialized = serializeReply(reply, ROUTE).components;
 
 interface CallbackBody {
     type: number;

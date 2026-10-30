@@ -1,5 +1,5 @@
 import { TextDisplayBuilder } from '@discordjs/builders';
-import { AckTrace } from '@seedcord/core/internal';
+import { AckTrace, serializeReply } from '@seedcord/core/internal';
 import { isSeedcordError, SeedcordErrorCode } from '@seedcord/errors';
 import { MessageFlags } from 'discord.js';
 import { describe, expect, it } from 'vitest';
@@ -13,7 +13,7 @@ const V2 = MessageFlags.IsComponentsV2;
 const V2_EPHEMERAL = V2 | MessageFlags.Ephemeral;
 
 const reply: ReplyResponse = { components: [new TextDisplayBuilder().setContent('hi')] };
-const serialized = reply.components.map((c) => c.toJSON());
+const serialized = serializeReply(reply, 'test').components;
 
 interface SentReplyOptions {
     components?: unknown[];

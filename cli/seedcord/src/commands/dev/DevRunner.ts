@@ -166,6 +166,10 @@ export class DevRunner {
         this.currentSession?.refreshCommands(shouldRefresh);
     }
 
+    public writeTypes(): void {
+        this.currentSession?.writeTypes();
+    }
+
     private async waitForSignal(): Promise<void> {
         return new Promise<void>((resolve) => {
             this.signalResolve = resolve;

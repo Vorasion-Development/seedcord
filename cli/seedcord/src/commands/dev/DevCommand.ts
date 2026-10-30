@@ -84,6 +84,7 @@ export class DevCommand extends BaseCommand {
                 onQuit: () => runner.quit(),
                 onDisconnect: () => runner.disconnect(),
                 onRestart: () => runner.restart(),
+                onCodegen: () => runner.writeTypes(),
                 onRefreshCommands: (shouldRefresh: boolean) => runner.refreshCommands(shouldRefresh),
                 onReady: () => {
                     runResult = runner

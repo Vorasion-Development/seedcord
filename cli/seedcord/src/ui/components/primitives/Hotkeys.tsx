@@ -47,6 +47,7 @@ export function SessionKeys({ state, interactive, following }: SessionKeysProps)
                 enabled={sessionKeyIsLive('r', gate)}
                 highlight={RESTART_HINT_PHASES.has(state.phase)}
             />
+            <Hotkey keyLabel="g" action="codegen" enabled={sessionKeyIsLive('g', gate)} />
             <Hotkey keyLabel="d" action="disconnect" enabled={sessionKeyIsLive('d', gate)} />
             <Hotkey keyLabel="c" action="clear" enabled={sessionKeyIsLive('c', gate)} />
             <Hotkey keyLabel="↑↓" action="scroll" />

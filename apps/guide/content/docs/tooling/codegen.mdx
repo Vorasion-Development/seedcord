@@ -31,17 +31,17 @@ export class SearchCommand extends BuilderComponent<'command'> {
 
 An option's name and its required flag are arguments to method calls. Those calls run when something constructs the class. TypeScript reads the source of that chain without running it, so the name `query` only exists once the chain has run.
 
-`seedcord codegen` records those names for you. It imports every TypeScript and JavaScript file under your commands folder, constructs each decorated class it finds, reads the JSON that class's builder produced, and writes what it found to `seedcord-gen.d.ts`.
+`seedcord codegen` records those names for you. It imports every TypeScript and JavaScript file under your commands folder, constructs each decorated class it finds, reads the JSON that class's builder produced, and writes what it found to `seedcord-gen.ts`.
 
 <Shell run="codegen" />
 
-Run it after you add a command, change its options, attach a plugin, or edit your emoji block.
+Run it after you add a command, change its options, attach a plugin, or edit your emoji block. Also run it after you add something an attached plugin types for you, like a new message in a translations plugin's locale files.
 
 Your handler then reads its options through `this.options`. `getString('query')` comes back as `string`, because you marked that option required. A typo in the name stops the build. [Command options](/commands/options) covers what each kind returns.
 
 `seedcord dev` runs codegen every time the bot starts, and again when you answer `y` to its refresh prompt. If you edit commands while dev is stopped, or your project never runs dev, run it yourself.
 
-Codegen writes the file into the `root` folder set in your `seedcord.config.ts`. A scaffolded project sets `root: './src'`, which puts it at `src/seedcord-gen.d.ts`.
+Codegen writes the file into the `root` folder set in your `seedcord.config.ts`. A scaffolded project sets `root: './src'`, which puts it at `src/seedcord-gen.ts`.
 
 ## What it writes
 
@@ -56,10 +56,11 @@ Every run rewrites the whole file from scratch.
 | [`MessageContextMenuRegistry`](ref:core/MessageContextMenuRegistry) | the same folder, for right-click commands on a message |
 | [`EmojiMap`](ref:types/EmojiMap) | the `bot.emojis` block on your config, which [Components](/components) shows in full |
 | [`Core`](ref:gateway/Core) | the key you gave each attached plugin |
+| [`PluginTypes`](ref:core/PluginTypes) | what each attached plugin found in your project, like the keys in its locale files |
 
 {/* prettier-ignore-end */}
 
-`Core` only appears once you attach a plugin. It [types `this.core.db`](/plugins/typing), for example.
+`Core` only appears once you attach a plugin, and `PluginTypes` once a plugin finds something to type. [Typing a plugin](/plugins/typing) shows both.
 
 Codegen records only the keys you attached. TypeScript resolves each plugin's type from the bot you built, since your `attach()` call already passes the plugin class. Your handler still reads `this.core.db` with every method that plugin declares.
 
@@ -75,6 +76,8 @@ To read your commands folder and your emoji block, codegen imports the module yo
 
 Even so, your bot never starts. Nothing calls `start()`, so no plugin connects, no task runs, and nothing you've written reaches Discord.
 
+Codegen does call `codegen()` on each attached plugin that has one. That method can read your project's files, like a translations plugin reading its `locales` folder, and it returns what the plugin types for you. If one throws, the run stops with `CliPluginCodegenThrew`, which gives the plugin's key and what it threw.
+
 A command constructor that throws fails the whole run, since codegen has to construct the class to read its options. `CliCommandConstructorThrew` shows the class, the file, and what your constructor threw. Keep anything that can fail out of a command constructor.
 
 ## Catching a stale file in CI
@@ -85,15 +88,16 @@ Other drift compiles perfectly. If you delete a command, its entry stays in `Sla
 
 <Shell exec="seedcord codegen --check" />
 
-It prints a line per step, like plain codegen. If the file matches, the last line reads `src/seedcord-gen.d.ts is up to date` and the command exits `0`. If it differs, `--check` throws `CliCodegenOutOfDate` and exits `1`.
+It prints a line per step, like plain codegen. If the file matches, the last line reads `src/seedcord-gen.ts is up to date` and the command exits `0`. If it differs, `--check` throws `CliCodegenOutOfDate` and exits `1`.
 
 ```txt output
-  ✔︎ read config     373ms
-  ✔︎ load bot        152ms
-  ✔︎ scan commands     6ms  2 commands
-  ✘ compare types     5ms
+  ✔︎ read config          373ms
+  ✔︎ load bot             152ms
+  ✔︎ scan commands          6ms  2 commands
+  ✔︎ run plugin codegen     4ms
+  ✘ compare types          5ms
 
-  [3119] src/seedcord-gen.d.ts is out of date. Run seedcord codegen and commit it.
+  [3119] src/seedcord-gen.ts is out of date. Run seedcord codegen and commit it.
 ```
 
 `--check` only reports, so you fix the drift by running plain `seedcord codegen`. The scaffold doesn't wire a script for it, so put it wherever your pipeline runs its checks.

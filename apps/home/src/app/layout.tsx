@@ -1,5 +1,5 @@
 import { BRAND } from '@seedcord/ui/palette';
-import { AgentLinks, cn, HOME_URL, MotionProvider, seedcordJsonLd } from '@seedcord/ui';
+import { AgentLinks, cn, HOME_URL, MotionProvider, seedcordJsonLd, SkipLink } from '@seedcord/ui';
 import { JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 
 import './globals.css';
@@ -61,14 +61,7 @@ function RootLayout({ children }: RootLayoutProps): ReactNode {
             >
                 <AgentLinks site="home" />
                 <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
-                <a
-                    href="#main-content"
-                    className={cn(
-                        'sr-only rounded-sm bg-(--seed-dark) px-4 py-2 font-semibold text-(--pith) focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-100'
-                    )}
-                >
-                    Skip to content
-                </a>
+                <SkipLink />
                 <ConsoleGreeting />
                 <MotionProvider>{children}</MotionProvider>
             </body>

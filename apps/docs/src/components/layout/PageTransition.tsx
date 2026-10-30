@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@seedcord/ui';
+import { cn, MAIN_CONTENT_ID } from '@seedcord/ui';
 import { usePathname } from 'next/navigation';
 import { useState, ViewTransition, type ReactNode } from 'react';
 
@@ -24,7 +24,7 @@ export function PageTransition({ order, children }: { order: readonly string[]; 
 
     return (
         <ViewTransition update={`page-${direction}`} default="none">
-            <main id="main-content" className={cn('min-w-0')}>
+            <main id={MAIN_CONTENT_ID} className={cn('min-w-0 scroll-mt-(--nav-h)')}>
                 {children}
             </main>
         </ViewTransition>

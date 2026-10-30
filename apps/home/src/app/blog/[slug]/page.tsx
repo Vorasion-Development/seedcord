@@ -1,4 +1,4 @@
-import { cn, serializeJsonLd } from '@seedcord/ui';
+import { cn, MAIN_CONTENT_ID, serializeJsonLd } from '@seedcord/ui';
 import { PreviewCard } from '@seedcord/ui/LinkPreview';
 import { ComponentEmbed } from 'discord-component-embed/react';
 import Image from 'next/image';
@@ -105,7 +105,7 @@ export default async function PostPage(route: PostParams): Promise<ReactNode> {
                 dangerouslySetInnerHTML={{ __html: serializeJsonLd(postJsonLd(post)) }}
             />
             <Nav />
-            <main id="main-content">
+            <main id={MAIN_CONTENT_ID}>
                 <article>
                     <PostHeader post={post} />
                     <div className={cn('mx-auto flex max-w-3xl flex-col gap-6 px-5 py-12 lg:py-16')}>

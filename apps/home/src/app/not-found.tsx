@@ -1,4 +1,4 @@
-import { cn } from '@seedcord/ui';
+import { cn, MAIN_CONTENT_ID } from '@seedcord/ui';
 import { Materwelon } from '@seedcord/ui/Materwelon';
 
 import { Footer } from '#components/home/Footer';
@@ -12,7 +12,7 @@ export default function NotFound(): ReactNode {
         <>
             <Nav />
             <main
-                id="main-content"
+                id={MAIN_CONTENT_ID}
                 className={cn(
                     'flex min-h-[70vh] flex-col items-center justify-center gap-6 bg-(--pith) px-5 py-20 text-center'
                 )}

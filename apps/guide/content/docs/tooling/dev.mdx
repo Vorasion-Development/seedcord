@@ -53,6 +53,7 @@ Once it starts, your terminal turns into a console for the bot. The wide pane on
 | `q` | quits |
 | `Ctrl-C` | one press arms it, a second quits. Any other key in between disarms it |
 | `r` | stops the bot, then starts it again from a fresh read of `seedcord.config.ts` |
+| `g` | runs [codegen](/tooling/codegen) for the running bot. Attaching a plugin or renaming its key still needs `r`, since dev keeps the bot it loaded at startup |
 | `d` | stops a running bot but leaves the terminal up. The status then reads "Disconnected. Press r to restart." |
 | `Ctrl-D` | one press arms it, a second does what `d` does. Any other key in between disarms it |
 | `c` | empties the log pane |
@@ -67,7 +68,7 @@ Once it starts, your terminal turns into a console for the bot. The wide pane on
 
 {/* prettier-ignore-end */}
 
-The scroll keys work at any time, even while the bot is starting or shutting down. `r`, `d`, and `c` also work while it starts, like during a command deploy that waits on Discord's rate limit. They do nothing while it stops or restarts, or while the refresh prompt waits for `y` or `n`. `d` needs a bot that's starting or running, so it does nothing after a disconnect or an error.
+The scroll keys work at any time, even while the bot is starting or shutting down. `r`, `g`, `d`, and `c` also work while it starts, like during a command deploy that waits on Discord's rate limit. They do nothing while it stops or restarts, or while the refresh prompt waits for `y` or `n`. `d` needs a bot that's starting or running, so it does nothing after a disconnect or an error.
 
 ## Filtering the log
 
@@ -96,11 +97,11 @@ The sidebar needs room, so seedcord picks a layout from the terminal's size.
 
 | size | layout | filter chips |
 | --- | --- | --- |
-| 32 rows and 120 columns or more | the sidebar, with the status, the chips, and the keys | always open |
-| 23 to 31 rows, 120 columns or more | the same sidebar | closed until you press `f`, which opens them in place of the status |
-| 23 rows or more, 80 to 119 columns | a slim rail with the status and the keys | closed until you press `f`, which swaps the logs for the chips |
-| 23 rows or more, under 80 columns | two status rows above the logs | the same as the slim rail |
-| under 23 rows | one status line above the logs | the same as the slim rail |
+| 33 rows and 120 columns or more | the sidebar, with the status, the chips, and the keys | always open |
+| 24 to 32 rows, 120 columns or more | the same sidebar | closed until you press `f`, which opens them in place of the status |
+| 24 rows or more, 80 to 119 columns | a slim rail with the status and the keys | closed until you press `f`, which swaps the logs for the chips |
+| 24 rows or more, under 80 columns | two status rows above the logs | the same as the slim rail |
+| under 24 rows | one status line above the logs | the same as the slim rail |
 
 {/* prettier-ignore-end */}
 

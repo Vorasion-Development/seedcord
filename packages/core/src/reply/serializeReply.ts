@@ -25,10 +25,10 @@ export function serializeReply<TNative>(
 
     const components = response.components.map((component, index) => {
         try {
-            return component.toJSON();
+            return 'toJSON' in component ? component.toJSON() : component;
         } catch (error) {
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a null-prototype value has no constructor at runtime
-            const name = component.constructor?.name;
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- untyped code can pass null, and a null-prototype value has no constructor
+            const name = component?.constructor?.name;
             throw translateSerializationError(error, !name || name === 'Object' ? 'component' : name, index, routeId);
         }
     });
