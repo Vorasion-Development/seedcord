@@ -3,7 +3,11 @@ import { SeedcordError, SeedcordTypeError } from '@seedcord/errors/internal';
 import { FRAMEWORK_CHANNELS } from '@seedcord/logger';
 import { HostPluginKeys } from '@seedcord/types/internal';
 
-import { declaredScopeOf, extendsThisCorePlugin, pluginLoggerOf, resolvedLifecycleSpecOf } from './Plugin';
+import { Kv } from '#src/kv/Kv';
+import { MemoryDriver } from '#src/kv/MemoryDriver';
+import { KvRateLimiter } from '#src/rateLimiter/KvRateLimiter';
+
+import { constructAttached, declaredScopeOf, extendsThisCorePlugin, resolvedLifecycleSpecOf } from './Plugin';
 import { splitPluginKey } from './splitPluginKey';
 
 import type { CoreBase } from '#interfaces/CoreBase';
@@ -30,16 +34,23 @@ export abstract class PluginHost<BotT extends Transport, BotRt extends Runtime> 
     public abstract readonly config: Config;
     public abstract readonly rest: REST;
     public abstract readonly applicationId: string;
-    public abstract readonly rateLimiter: IRateLimiter;
     public abstract readonly bus: Bus;
+
+    /** @see {@link Kv} */
+    public readonly kv: Kv;
+    /** @see {@link IRateLimiter} */
+    public readonly rateLimiter: IRateLimiter;
 
     #sealed = false;
     readonly #attachments: Attachment[] = [];
     readonly #groups = new Map<string, Record<string, PluginLike>>();
     readonly #scope: { readonly transport: BotT; readonly runtime: BotRt };
 
-    constructor(transport: BotT, runtime: BotRt) {
+    constructor(transport: BotT, runtime: BotRt, driver: Config['kv']) {
         this.#scope = { transport, runtime };
+        const kvDriver = driver ?? new MemoryDriver();
+        this.kv = new Kv(kvDriver, 'app');
+        this.rateLimiter = new KvRateLimiter(new Kv(kvDriver, 'seedcord'));
     }
 
     /** @internal */
@@ -117,9 +128,9 @@ export abstract class PluginHost<BotT extends Transport, BotRt extends Runtime> 
             throw new SeedcordTypeError(SeedcordErrorCode.CorePluginFromOtherCore, [Plugin.name]);
         }
 
-        const instance = new Plugin(this, ...args);
+        const kv = new Kv(this.kv.driver, 'plugins', key);
+        const instance = constructAttached(key, kv, () => new Plugin(this, ...args));
         this.#assertScope(Plugin.name, declaredScopeOf(instance));
-        pluginLoggerOf(instance).setChannel(key);
         this.#attachments.push({ key, instance, spec: resolvedLifecycleSpecOf(instance) });
 
         if (leaf === undefined) {

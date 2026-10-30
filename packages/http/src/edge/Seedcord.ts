@@ -30,8 +30,7 @@ import type { HttpEdgeConfig } from '#interfaces/Config';
 import type { EngineContext } from '#src/engine';
 import type { REST } from '@discordjs/rest';
 import type { Bus } from '@seedcord/core';
-import type { BakedIds } from '@seedcord/core/internal';
-import type { IRateLimiter } from '@seedcord/types';
+import type { StartupTasks, BakedIds } from '@seedcord/core/internal';
 import type { DevChannel, SeedcordCliEvents, SeedcordFrameworkEvents } from '@seedcord/types/internal';
 
 // seedcord build's worker entry writes these before bot.ts loads
@@ -65,9 +64,6 @@ export class Seedcord extends PluginHost<'http', 'edge'> {
     /** Discord REST client built from `bot.restOptions`, with both sweepers off. */
     public readonly rest: REST;
 
-    /** @see {@link IRateLimiter} */
-    public readonly rateLimiter: IRateLimiter;
-
     /** @see {@link Bus} */
     public readonly bus: Bus;
 
@@ -78,7 +74,7 @@ export class Seedcord extends PluginHost<'http', 'edge'> {
     public readonly shutdown = edgeShutdown;
 
     /** Add a task that runs during startup, on the first POST. */
-    public readonly startup: Pick<CoordinatedStartup, 'addTask'>;
+    public readonly startup: StartupTasks;
 
     public readonly config: HttpEdgeConfig;
 
@@ -98,7 +94,7 @@ export class Seedcord extends PluginHost<'http', 'edge'> {
     static #isInstantiated = false;
 
     constructor(config: HttpEdgeConfig) {
-        super('http', 'edge');
+        super('http', 'edge', config.kv);
         if (Seedcord.#isInstantiated) throw new SeedcordError(SeedcordErrorCode.CoreSingletonViolation);
         Seedcord.#isInstantiated = true;
 
@@ -108,7 +104,6 @@ export class Seedcord extends PluginHost<'http', 'edge'> {
 
         this.#service = new InteractionsService(this, config, edgeRestOptions(config.bot.restOptions));
         this.rest = this.#service.rest;
-        this.rateLimiter = this.#service.rateLimiter;
         this.bus = this.#service.bus;
 
         const cli = connectDevChannel();

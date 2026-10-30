@@ -8,6 +8,7 @@ import { RuntimeBrand, TransportBrand } from './brands';
 import { resolveLifecycleSpec } from './lifecycle';
 
 import type { CoreBase } from '#interfaces/CoreBase';
+import type { Kv } from '#src/kv/Kv';
 import type { ScopedSpec } from './brands';
 import type { ResolvedPluginLifecycleSpec, PluginLifecycleSpec } from './lifecycle';
 import type {
@@ -23,6 +24,14 @@ import type {
     TransportAssert
 } from './options';
 import type { Tail, FrameworkChannel, HmrAware, HmrUpdateEvent } from '@seedcord/types';
+
+interface Attaching {
+    readonly key: string;
+    readonly kv: Kv;
+}
+
+// set only while attach() runs `new Plugin()`
+let attaching: Attaching | undefined;
 
 export interface Initializeable {
     init(): Promise<void>;
@@ -95,12 +104,19 @@ export abstract class Plugin<
     /** Logs under the plugin's class name, on the channel its attach key sets. */
     protected readonly logger: Logger;
 
+    readonly #kv: Kv | undefined;
+
     // CoreBase here keeps the augmented Core out of ConstructorParameters, which attach reads
     constructor(
         private readonly host: CoreBase,
         ...[spec]: PluginSpecArgs<Opts, Fixed>
     ) {
-        this.logger = new Logger(this.constructor.name);
+        // cleared here. a plugin this constructor builds by hand doesn't get the outer key
+        const attachment = attaching;
+        attaching = undefined;
+        this.#kv = attachment?.kv;
+
+        this.logger = new Logger(this.constructor.name, attachment && { channel: attachment.key });
         this[loggerSlot] = this.logger;
         this[resolvedSpecSlot] = resolveLifecycleSpec(spec, this.constructor.name);
 
@@ -116,6 +132,24 @@ export abstract class Plugin<
     protected get core(): TCore {
         // justified: each transport binds TCore to the Core its own host satisfies
         return this.host as TCore;
+    }
+
+    /**
+     * This plugin's records in the bot's `config.kv`, stored under its attach key. Two attachments of
+     * one plugin class each get their own records. Renaming the attach key leaves the records under
+     * the old key behind.
+     *
+     * @throws A **SeedcordTypeError** when something built the plugin with `new` outside `attach()`.
+     * @example
+     * ```ts
+     * // works in a field initializer, the constructor, and every method
+     * private readonly jobs = this.kv.collection<Job>('job');
+     * ```
+     */
+    protected get kv(): Kv {
+        if (!this.#kv)
+            throw new SeedcordTypeError(SeedcordErrorCode.CorePluginKvOutsideAttach, [this.constructor.name]);
+        return this.#kv;
     }
 
     /**
@@ -193,6 +227,16 @@ export function pluginLoggerOf(plugin: PluginLike): Logger {
 /** @internal */
 export function declaredScopeOf(plugin: PluginLike): DeclaredScope {
     return plugin[scopeSlot];
+}
+
+/** @internal */
+export function constructAttached<TPlugin>(key: string, kv: Kv, construct: () => TPlugin): TPlugin {
+    attaching = { key, kv };
+    try {
+        return construct();
+    } finally {
+        attaching = undefined;
+    }
 }
 
 export type { PluginLifecycleSpec } from './lifecycle';

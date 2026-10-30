@@ -22,7 +22,6 @@ import { toWebRequest, writeWebResponse } from './webBridge';
 import type { HttpServerConfig } from '#interfaces/Config';
 import type { REST } from '@discordjs/rest';
 import type { Bus } from '@seedcord/core';
-import type { IRateLimiter } from '@seedcord/types';
 import type { SeedcordInstance } from '@seedcord/types/internal';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -51,9 +50,6 @@ export class Seedcord extends ServerHost<'http'> implements SeedcordInstance {
     /** Discord REST client built from `bot.restOptions`. `start()` sets the token. */
     public readonly rest: REST;
 
-    /** @see {@link IRateLimiter} */
-    public readonly rateLimiter: IRateLimiter;
-
     /** @see {@link Bus} */
     public readonly bus: Bus;
 
@@ -73,14 +69,13 @@ export class Seedcord extends ServerHost<'http'> implements SeedcordInstance {
      * @throws A **SeedcordError** when the running Node or Bun is older than the range in `engines`.
      */
     constructor(config: HttpServerConfig) {
-        super('http', new CoordinatedShutdown(config.lifecycle?.shutdownDeadline), new CoordinatedStartup());
+        super('http', new CoordinatedShutdown(config.lifecycle?.shutdownDeadline), new CoordinatedStartup(), config.kv);
         this.config = config;
 
         bindBotColor(() => this.config.botColor);
 
         this.#service = new InteractionsService(this, config, config.bot.restOptions);
         this.rest = this.#service.rest;
-        this.rateLimiter = this.#service.rateLimiter;
         this.bus = this.#service.bus;
         this.#endpoint = new NodeEndpoint(
             this.#service,

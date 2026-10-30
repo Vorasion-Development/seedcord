@@ -1,4 +1,12 @@
-import { Commands, ContextMenus, InteractionKind, StartupPhase, Subscribe, Subscriber } from '@seedcord/core';
+import {
+    Commands,
+    ContextMenus,
+    InteractionKind,
+    MemoryDriver,
+    StartupPhase,
+    Subscribe,
+    Subscriber
+} from '@seedcord/core';
 import { storeInteractionRoute } from '@seedcord/core/internal';
 import { Plugin } from '@seedcord/core/plugin';
 import { SeedcordErrorCode } from '@seedcord/errors';
@@ -272,6 +280,13 @@ describe('the edge Seedcord', () => {
         expect(() => seedcord.attach('server', ServerOnly)).toThrow(
             expect.objectContaining({ code: SeedcordErrorCode.CorePluginScopeMismatch })
         );
+    });
+
+    it('backs core.kv with config.kv', () => {
+        const driver = new MemoryDriver();
+        const seedcord = new Seedcord({ ...config(), kv: driver });
+
+        expect(seedcord.kv.driver).toBe(driver);
     });
 
     it('resolves the application id from the token on the first request', async () => {
