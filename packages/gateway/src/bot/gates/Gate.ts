@@ -44,7 +44,7 @@ export interface InteractionGateContext<Repliable extends Repliables = Repliable
  * annotation, so a gate that reads one event's `payload` is rejected on a handler for a different
  * event. The default supports every event.
  *
- * @typeParam Names - The event name or names the gate reads, typing `payload` to that event's args tuple.
+ * @typeParam Names - One event or a union of the events the gate reads. `payload` gets that event's args tuple.
  *
  * @example
  * ```ts

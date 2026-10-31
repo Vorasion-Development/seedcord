@@ -114,7 +114,7 @@ export interface Gate<Ctx extends GateContextBase = GateContextBase, Name extend
  * {@link defineEffectGate}.
  *
  * @typeParam Ctx - The context both `check` and `commit` require. A field missing from it fails to compile.
- * @typeParam Name - The gate's literal name, shown when a mismatch error names the gate.
+ * @typeParam Name - The literal name a mismatch error prints.
  *
  * @example
  * ```ts

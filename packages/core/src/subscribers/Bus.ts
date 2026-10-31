@@ -105,7 +105,7 @@ export class Bus extends TypedEventEmitter<SubscriptionTuples> {
                     );
             })
         );
-        // collected first so one throw names every missing webhook
+        // collected first so one throw lists every missing webhook
         if (missing.length > 0) throw new SeedcordError(SeedcordErrorCode.ConfigWebhookNotFound, [missing.join(', ')]);
     }
 
