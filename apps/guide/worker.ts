@@ -1,6 +1,7 @@
+import { PRODUCTION_ORIGIN } from '@seedcord/brand';
 import { agentLinkHeader } from '@seedcord/ui/agents';
 import { PageAsset, TWIN } from '@seedcord/ui/PageAsset';
-import { GUIDE, PRODUCTION_ORIGIN } from '@seedcord/ui/sites';
+import { GUIDE } from '@seedcord/ui/sites';
 
 import { redirectFor } from './src/lib/redirects';
 

@@ -1,4 +1,4 @@
-import { SiteAddress } from '@seedcord/ui';
+import { SiteAddress } from '@seedcord/brand';
 import { OgPageCard } from '@seedcord/ui/OgCard';
 import { loadOgFonts, OG_SIZE } from '@seedcord/ui/og';
 import { BRAND } from '@seedcord/ui/palette';
