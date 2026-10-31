@@ -1,4 +1,5 @@
-import { DOCS, DOCS_URL as DOCS_PRODUCTION, GUIDE } from '@seedcord/ui';
+import { PRODUCTION_SITES } from '@seedcord/brand';
+import { GUIDE } from '@seedcord/ui';
 import { ogPageCardAlt } from '@seedcord/ui/OgCard';
 import { CARD, TWIN } from '@seedcord/ui/PageAsset';
 
@@ -10,7 +11,8 @@ export const SITE_DESCRIPTION = 'The guide to building Discord bots with seedcor
 export { HOME_URL, REPO_URL } from '@seedcord/ui';
 
 // run the docs app on 3001 next to the guide to check docs links in dev mode
-const DOCS_FALLBACK = process.env.NODE_ENV === 'development' ? `http://localhost:3001${DOCS.path}` : DOCS_PRODUCTION;
+const { docs } = PRODUCTION_SITES;
+const DOCS_FALLBACK = process.env.NODE_ENV === 'development' ? `http://localhost:3001${docs.path}` : docs.url;
 
 export const DOCS_URL = process.env.NEXT_PUBLIC_DOCS_URL ?? DOCS_FALLBACK;
 

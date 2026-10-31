@@ -1,4 +1,6 @@
-import { DOCS_URL, GUIDE_URL as GUIDE } from '#src/sites';
+import { PRODUCTION_SITES } from '@seedcord/brand';
+
+import { GUIDE_URL as GUIDE } from '#src/sites';
 
 import type { Skill } from '#src/skills';
 
@@ -12,7 +14,7 @@ license: Apache-2.0
 compatibility: TypeScript projects on Node 24.22.1+ (24.x), Node 26.12.1+, or Bun 1.4.2+.
 metadata:
     documentation: ${GUIDE}
-    reference: ${DOCS_URL}
+    reference: ${PRODUCTION_SITES.docs.url}
     llms_txt: ${GUIDE}/llms.txt
 ---
 

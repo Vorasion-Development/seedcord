@@ -1,4 +1,5 @@
-import { AgentLinks, DOCS, SkipLink, ThemeProvider, TooltipProvider, cn, seedcordJsonLd } from '@seedcord/ui';
+import { PRODUCTION_SITES } from '@seedcord/brand';
+import { AgentLinks, SkipLink, ThemeProvider, TooltipProvider, cn, seedcordJsonLd } from '@seedcord/ui';
 import { FAVICON_SIZE } from '@seedcord/ui/MaterwelonFavicon';
 import { ogPageCardAlt } from '@seedcord/ui/OgCard';
 import { Space_Grotesk } from 'next/font/google';
@@ -25,7 +26,11 @@ const ROOT_CARD = CARD.publicPath('/');
 const ROOT_CARD_ALT = ogPageCardAlt({ pill: 'docs', name: 'Reference', meta: [] });
 
 // next 16.3.8 leaves basePath off icon urls in metadata and off a file-based icon under turbopack
-const ICON = { url: `${DOCS.path}/icon`, type: 'image/png', sizes: `${FAVICON_SIZE.width}x${FAVICON_SIZE.height}` };
+const ICON = {
+    url: `${PRODUCTION_SITES.docs.path}/icon`,
+    type: 'image/png',
+    sizes: `${FAVICON_SIZE.width}x${FAVICON_SIZE.height}`
+};
 
 export const metadata: Metadata = {
     metadataBase: new URL(SITE_URL),

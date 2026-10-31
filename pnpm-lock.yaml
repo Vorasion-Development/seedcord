@@ -502,6 +502,9 @@ importers:
 
   apps/docs:
     dependencies:
+      '@seedcord/brand':
+        specifier: workspace:^
+        version: link:../../tooling/brand
       '@seedcord/docs-engine':
         specifier: workspace:^
         version: link:../../tooling/docs-engine

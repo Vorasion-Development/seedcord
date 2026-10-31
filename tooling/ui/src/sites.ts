@@ -12,11 +12,9 @@ export const IS_PRODUCTION = ORIGIN === PRODUCTION_ORIGIN;
 
 export const HOME = new SiteAddress(ORIGIN);
 export const GUIDE = new SiteAddress(`${ORIGIN}${PRODUCTION_SITES.guide.path}`);
-export const DOCS = PRODUCTION_SITES.docs;
 
 export const HOME_URL = HOME.url;
 export const GUIDE_URL = GUIDE.url;
-export const DOCS_URL = DOCS.url;
 
 export const REPO_URL = 'https://github.com/seedcord/seedcord';
 export const GITHUB_ORG_URL = 'https://github.com/seedcord';

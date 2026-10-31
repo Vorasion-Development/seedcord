@@ -10,25 +10,20 @@ describe('the three sites', () => {
     });
 
     it('sit on the production origin by default', async () => {
-        const { HOME_URL, GUIDE_URL, DOCS_URL } = await import('#src/sites');
+        const { HOME_URL, GUIDE_URL } = await import('#src/sites');
 
-        expect([HOME_URL, GUIDE_URL, DOCS_URL]).toEqual([
-            'https://seedcord.org',
-            'https://seedcord.org/guide',
-            'https://seedcord.org/docs'
-        ]);
+        expect([HOME_URL, GUIDE_URL]).toEqual(['https://seedcord.org', 'https://seedcord.org/guide']);
     });
 
-    it('move home and the guide to NEXT_PUBLIC_SITE_ORIGIN, and docs and the chat link stay on production', async () => {
+    it('move home and the guide to NEXT_PUBLIC_SITE_ORIGIN, and the chat link stays on production', async () => {
         vi.stubEnv('NEXT_PUBLIC_SITE_ORIGIN', 'https://preview.seedcord.org');
 
-        const { HOME_URL, GUIDE_URL, DOCS_URL, DISCORD_URL, IS_PRODUCTION } = await import('#src/sites');
+        const { HOME_URL, GUIDE_URL, DISCORD_URL, IS_PRODUCTION } = await import('#src/sites');
 
         expect(IS_PRODUCTION).toBe(false);
-        expect([HOME_URL, GUIDE_URL, DOCS_URL, DISCORD_URL]).toEqual([
+        expect([HOME_URL, GUIDE_URL, DISCORD_URL]).toEqual([
             'https://preview.seedcord.org',
             'https://preview.seedcord.org/guide',
-            'https://seedcord.org/docs',
             'https://seedcord.org/chat/'
         ]);
     });

@@ -8,8 +8,4 @@ function withAlpha(hex: string, alpha: number): string {
 
 const SUB_ALPHA = 0.85;
 
-// og images and viewport.themeColor need plain hex
-export const BRAND = {
-    ...BRAND_COLORS,
-    sub: withAlpha(BRAND_COLORS.seedDark, SUB_ALPHA)
-} as const;
+export const SUB_TEXT = withAlpha(BRAND_COLORS.seedDark, SUB_ALPHA);
