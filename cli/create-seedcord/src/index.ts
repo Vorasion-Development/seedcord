@@ -3,6 +3,7 @@ import process from 'node:process';
 
 import { Prompter, unlessCancelled } from '@seedcord/cli-prompts';
 import { paint } from '@seedcord/errors';
+import { GUIDE_URL } from '@seedcord/errors/internal';
 
 import ownPackage from '#package' with { type: 'json' };
 
@@ -124,7 +125,7 @@ async function reportOutcome(
 
     // powershell and cmd split a command wrapped with a trailing `\`
     output.row('again', [paint.bold(reproducingCommand(answers, agent))]);
-    output.row('guide', [paint.sky('https://seedcord.org/guide')]);
+    output.row('guide', [paint.sky(GUIDE_URL)]);
     output.line();
     output.line(
         paint.mute(

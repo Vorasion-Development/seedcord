@@ -2296,6 +2296,9 @@ importers:
         specifier: catalog:deps
         version: 5.1.0
     devDependencies:
+      '@seedcord/errors':
+        specifier: workspace:^
+        version: link:../../packages/errors
       '@seedcord/eslint-config':
         specifier: workspace:^
         version: link:../eslint-config

@@ -46,8 +46,8 @@ Startup runs three phases in order.
 | startup phase | what has happened | plugins |
 | --- | --- | --- |
 | `Configuration` | nothing connected | `init()` runs here by default |
-| `Login` | the gateway session opens, and seedcord loads your emojis and deploys your commands | |
-| `Ready` | your handlers start running | `ready()` always runs here |
+| `Login` | the gateway session opens, and http runs its REST-only startup work | |
+| `Ready` | handlers are live and interactions dispatch | `ready()` always runs here |
 
 {/* prettier-ignore-end */}
 

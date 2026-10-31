@@ -6,5 +6,6 @@ export type { VitePluginPlace } from './messageParts';
 // these files don't exactly belong in this package but are here because there's no better place for them
 export { BRAND, setColorLevel, WORDMARK } from './palette';
 export { displayPath } from './displayPath';
+export { GUIDE_URL } from './guideUrl';
 export { isSnowflake } from './isSnowflake';
 export { validateDiscordToken, type BotToken } from './validateDiscordToken';

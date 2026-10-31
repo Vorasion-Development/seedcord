@@ -82,7 +82,7 @@ export class UptimeCommand extends SlashHandler<'uptime'> {
 
 A handler can call every public member of your class. `startedAt` is private, so a handler reads the time through `elapsed()` and can't overwrite it. Keep connections and state private, and make public only the methods you want handlers to call.
 
-Handlers can call those methods only after startup. Startup runs in three phases: Configuration, Login and Ready. `init()` runs in Configuration by default, and a plugin can also define `ready()` for the Ready phase. Handlers start receiving interactions when the Ready phase starts, so a handler can call your method while `ready()` is still running. If a method reads something `ready()` sets, return early or throw while it's unset. [The lifecycle](/plugins/lifecycle) has the full order.
+Handlers can call those methods only after startup. Startup runs in three phases: Configuration, Login and Ready. `init()` runs in Configuration by default, and a plugin can also define `ready()` for the Ready phase. Handlers start receiving interactions once every `init()` has finished, so a handler can call your method while `ready()` is still running. If a method reads something `ready()` sets, return early or throw while it's unset. [The lifecycle](/plugins/lifecycle) has the full order.
 
 ## Closing what init() opened
 
@@ -196,6 +196,8 @@ Uptime rejected its options. Label is empty.
 ## Logging
 
 `this.logger` exists from the constructor onward and prints under your class name. Each log line goes to a channel, a named stream that a bot can filter or silence. `attach` sets the channel to the key before your constructor runs, so if someone attaches your plugin as `metrics`, every line it logs goes to the `metrics` channel. [The log channel section](/plugins#the-key-is-also-a-log-channel) shows how a bot filters them.
+
+A plugin that runs jobs can give each one its own label. `this.logger.withLabel('nightly-sync')` returns a logger that prints under `nightly-sync` on the same channel.
 
 ## Keeping records
 

@@ -120,16 +120,16 @@ describe('DevStore', () => {
 
     it.each(['beginRestart', 'beginDisconnect'] as const)('%s drops the port of the run that ended', (method) => {
         const store = new DevStore();
-        store.apply({ type: 'server-listening', port: 4321 });
+        store.apply({ type: 'server-port', port: 4321 });
 
         store[method]();
 
         expect(store.getState().port).toBeNull();
     });
 
-    it('apply reduces server-listening into the bound port', () => {
+    it('apply reduces server-port into the bound port', () => {
         const store = new DevStore();
-        store.apply({ type: 'server-listening', port: 4000 });
+        store.apply({ type: 'server-port', port: 4000 });
 
         expect(store.getState().port).toBe(4000);
     });

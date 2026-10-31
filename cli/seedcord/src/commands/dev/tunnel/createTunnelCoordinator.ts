@@ -1,5 +1,5 @@
 import { SeedcordErrorCode, paint } from '@seedcord/errors';
-import { SeedcordError } from '@seedcord/errors/internal';
+import { GUIDE_URL, SeedcordError } from '@seedcord/errors/internal';
 
 import { findCloudflared, installHint, systemLookup } from './cloudflared';
 import { CloudflaredTunnel, systemTunnelDeps } from './CloudflaredTunnel';
@@ -8,8 +8,13 @@ import { awaitReachable, PROBE_SECONDS } from './probe';
 import { TunnelCoordinator } from './TunnelCoordinator';
 
 import type { ResolvedTunnel } from '#core/config/schema';
-import type { TunnelStatus } from './TunnelCoordinator';
+import type { TunnelDeps } from './CloudflaredTunnel';
+import type { TunnelKind, TunnelStatus } from './TunnelCoordinator';
 import type { ILogger } from '@seedcord/types';
+
+const PASTE_HINT = 'The tunnel is still up, so try pasting that URL into the dashboard.';
+const RESTART_HINT = 'Restart for a fresh hostname, or set `tunnel` to an https URL you already serve.';
+const NO_PORT_HINT = `No tunnel, since the bot runs with ${paint.bold('port: false')} and cloudflared has no port to forward to. Give the bot a port while you develop, or set ${paint.amber('tunnel')} to the url of the server that serves it: ${paint.sky(`${GUIDE_URL}/build/embed`)}`;
 
 export function missingCloudflaredHint(platform: NodeJS.Platform): string {
     const arrow = paint.mute('→');
@@ -29,35 +34,47 @@ export function createTunnelCoordinator(
     if (tunnel.mode === 'off') return undefined;
 
     const deps = systemTunnelDeps();
-    const endpoint = InteractionsEndpoint.create();
+    const kind = tunnel.mode === 'url' ? configuredKind(tunnel.url, deps) : quickKind(deps, findBinary());
+    return kind && new TunnelCoordinator({ kind, endpoint: InteractionsEndpoint.create(), onStatus, logger });
+}
 
-    if (tunnel.mode === 'url') {
-        return new TunnelCoordinator({
+function configuredKind(url: string, deps: TunnelDeps): TunnelKind {
+    return {
+        prepare: () => ({
+            opening: `Checking that ${paint.sky.bold(url)} answers`,
             makeTunnel: () => ({
                 // no answer here means your server is down or the url is wrong
-                open: async (signal, _port, onResolving) => {
+                open: async (signal, onResolving) => {
                     onResolving?.();
-                    if (await awaitReachable(tunnel.url, deps, signal)) return tunnel.url;
-                    throw new SeedcordError(SeedcordErrorCode.CliTunnelUnreachable, [tunnel.url, PROBE_SECONDS]);
+                    if (await awaitReachable(url, deps, signal)) return url;
+                    throw new SeedcordError(SeedcordErrorCode.CliTunnelUnreachable, [url, PROBE_SECONDS]);
                 },
-                // the forwarder is the user's process
                 stop: () => undefined
-            }),
-            kind: 'configured',
-            endpoint,
-            onStatus,
-            logger
-        });
-    }
+            })
+        }),
+        failureHint: () => undefined,
+        clearsEndpointOnStop: false
+    };
+}
 
-    const binary = findBinary();
+function quickKind(deps: TunnelDeps, binary: string | undefined): TunnelKind | undefined {
     if (!binary) return undefined;
-
-    return new TunnelCoordinator({
-        makeTunnel: (onLost) => new CloudflaredTunnel(deps, binary, onLost),
-        kind: 'quick',
-        endpoint,
-        onStatus,
-        logger
-    });
+    return {
+        prepare: (port) => {
+            if (port === false) return { warning: NO_PORT_HINT };
+            return {
+                opening: `Requesting a cloudflared tunnel to port ${paint.sky.bold(String(port))}`,
+                makeTunnel: (onLost) => {
+                    const cloudflared = new CloudflaredTunnel(deps, binary, onLost);
+                    return {
+                        open: (signal, onResolving) => cloudflared.open(signal, port, onResolving),
+                        stop: () => cloudflared.stop()
+                    };
+                }
+            };
+        },
+        failureHint: (tunnelStopped) => (tunnelStopped ? RESTART_HINT : PASTE_HINT),
+        // a quick hostname lasts only as long as this process
+        clearsEndpointOnStop: true
+    };
 }

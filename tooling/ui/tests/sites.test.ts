@@ -1,3 +1,4 @@
+import { GUIDE_URL as RUNTIME_GUIDE_URL } from '@seedcord/errors/internal';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SiteAddress } from '#src/sites';
@@ -16,7 +17,7 @@ describe('the three sites', () => {
 
         expect([HOME_URL, GUIDE_URL, DOCS_URL]).toEqual([
             'https://seedcord.org',
-            'https://seedcord.org/guide',
+            RUNTIME_GUIDE_URL,
             'https://seedcord.org/docs'
         ]);
     });

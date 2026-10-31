@@ -157,9 +157,10 @@ export class Seedcord extends ServerHost<'http'> implements SeedcordInstance {
             return Promise.resolve();
         });
 
-        this.startup.addTask(StartupPhase.Ready, 'http-server', () => {
+        this.startup.addTask(StartupPhase.Ready, 'http-server', async () => {
             const { port = DEFAULT_PORT } = this.config;
-            return port === false ? Promise.resolve() : this.#listen(port);
+            if (port !== false) await this.#listen(port);
+            getDevChannel()?.send('seedcord:server-port', { port: this.#boundPort ?? false });
         });
 
         if (!Envapter.isTest) {
@@ -209,7 +210,6 @@ export class Seedcord extends ServerHost<'http'> implements SeedcordInstance {
         // justified: address() is AddressInfo once a TCP server is listening
         this.#boundPort = (server.address() as AddressInfo).port;
         this.#logger.info(`Interactions server listening on port ${paint.sky.bold(String(this.#boundPort))}`);
-        getDevChannel()?.send('seedcord:server-listening', { port: this.#boundPort });
 
         this.shutdown.addTask(
             ShutdownPhase.Unbind,

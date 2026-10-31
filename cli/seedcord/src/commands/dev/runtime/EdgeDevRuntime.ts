@@ -147,7 +147,7 @@ export class EdgeDevRuntime extends BaseDevRuntime<EdgeStarted> {
             this.settleStart = () => resolve(undefined);
             cli.on('seedcord:started', ({ username }) => {
                 // discord pings the endpoint as soon as the tunnel points it here
-                this.emit(context, { type: 'server-listening', port });
+                this.emit(context, { type: 'server-port', port });
                 resolve(username);
             });
             cli.on('seedcord:start-failed', ({ error }) => reject(fromWireError(error)));

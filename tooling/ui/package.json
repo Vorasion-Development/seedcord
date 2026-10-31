@@ -76,6 +76,7 @@
         "unist-util-visit": "catalog:deps"
     },
     "devDependencies": {
+        "@seedcord/errors": "workspace:^",
         "@seedcord/eslint-config": "workspace:^",
         "@seedcord/tsconfig": "workspace:^",
         "@seedcord/tsdown-config": "workspace:^",

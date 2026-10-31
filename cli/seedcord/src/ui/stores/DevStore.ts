@@ -24,7 +24,7 @@ export interface DevState {
     readonly transport: DevTransport | null;
     readonly restartRequired: boolean;
     readonly commandUpdatePrompt: string[] | null;
-    readonly port: number | null;
+    readonly port: number | false | null;
     readonly tunnel: TunnelStatus | null;
     readonly armed: Confirmable | null;
     readonly idleAnimation: boolean;
@@ -131,7 +131,7 @@ export class DevStore extends ChangeStore {
                 this.patch({ commandUpdatePrompt: event.files });
                 break;
             }
-            case 'server-listening': {
+            case 'server-port': {
                 this.patch({ port: event.port });
                 break;
             }
