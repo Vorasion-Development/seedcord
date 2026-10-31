@@ -139,7 +139,7 @@ The [dev terminal](/tooling/dev) draws every channel as a filter chip, so the mo
 
 ### Sending one line somewhere else
 
-A handler that charges a user belongs on `interactions`, but you'd want its payment lines next to the rest of your payment logs. [`inChannel`](ref:logger/Logger.inChannel) returns a second logger with the same label, on the channel you pass.
+A handler that charges a user belongs on `interactions`, but you'd want its payment lines next to the rest of your payment logs. [`withChannel`](ref:logger/Logger.withChannel) returns a second logger with the same label, on the channel you pass. [`withLabel`](ref:logger/Logger.withLabel) does the reverse and keeps the channel, so a plugin can label each job it runs.
 
 ```ts twoslash
 import { SlashHandler, SlashRoute } from '@seedcord/gateway';
@@ -148,7 +148,7 @@ import { SlashHandler, SlashRoute } from '@seedcord/gateway';
 export class Ping extends SlashHandler<'ping'> {
     public async execute(): Promise<void> {
         // ---cut---
-        this.logger.inChannel('payments').info('charge accepted');
+        this.logger.withChannel('payments').info('charge accepted');
         // ---cut-after---
     }
 }
