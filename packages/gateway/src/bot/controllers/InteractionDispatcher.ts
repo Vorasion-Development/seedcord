@@ -16,7 +16,6 @@ import {
     runHandlerGates,
     slowGateMonitor
 } from '@seedcord/core/internal';
-import { InFlight } from '@seedcord/core/node/internal';
 import { prefixOf } from '@seedcord/custom-id';
 import { SeedcordErrorCode, paint } from '@seedcord/errors';
 import { SeedcordError, SeedcordTypeError } from '@seedcord/errors/internal';
@@ -46,6 +45,7 @@ import type { Core } from '#interfaces/Core';
 import type { Repliables, ValidInteractionTypes } from '#src/handlers/interactionTypes';
 import type { DispatchOutcome, DispatchResult, MiddlewareKind } from '@seedcord/core';
 import type { Initializeable, ContextMenuLeaves } from '@seedcord/core/internal';
+import type { InFlight } from '@seedcord/core/node/internal';
 import type { CustomIdMatcher, HmrAware, HmrUpdateEvent } from '@seedcord/types';
 import type {
     AutocompleteInteraction,
@@ -115,8 +115,6 @@ export class InteractionDispatcher implements Initializeable, HmrAware {
     private readonly keysToIgnore = new Set<CustomIdMatcher>();
     private readonly middlewares = new MiddlewareRegistry<InteractionMiddlewareConstructor>(interactionMiddleware);
 
-    private readonly inFlight = new InFlight(this.logger, 'Interactions');
-
     // a reload reports on the hmr channel
     private loading = false;
     private readonly loadedHandlers: { name: string; from: string }[] = [];
@@ -128,7 +126,10 @@ export class InteractionDispatcher implements Initializeable, HmrAware {
         InteractionArtifact[]
     >;
 
-    constructor(protected core: Core) {
+    constructor(
+        protected core: Core,
+        private readonly inFlight: InFlight
+    ) {
         const ignoredKeysFromConfig = hasKeys(this.core.config.bot.interactions, ['ignoreCustomIds'])
             ? this.core.config.bot.interactions.ignoreCustomIds
             : undefined;
@@ -354,23 +355,15 @@ export class InteractionDispatcher implements Initializeable, HmrAware {
 
     private attachToClient(): void {
         this.core.bot.client.on(Events.InteractionCreate, (interaction) => {
-            if (this.inFlight.closed) return;
-            this.core.bus[PublishDefault]('anyInteraction', { interaction });
-            const run = this.handleInteraction(interaction).catch((caught: unknown) => {
-                const error = asError(caught);
-                this.logger.error(`[${paint.coral.bold('UNHANDLED ERROR AT ROOT')}] ${error.name}`, error.stack);
-                this.core.bus[PublishDefault]('unhandledInteractionError', { error });
+            void this.inFlight.admit(() => {
+                this.core.bus[PublishDefault]('anyInteraction', { interaction });
+                return this.handleInteraction(interaction).catch((caught: unknown) => {
+                    const error = asError(caught);
+                    this.logger.error(`[${paint.coral.bold('UNHANDLED ERROR AT ROOT')}] ${error.name}`, error.stack);
+                    this.core.bus[PublishDefault]('unhandledInteractionError', { error });
+                });
             });
-            this.inFlight.track(run);
         });
-    }
-
-    public stopAccepting(): void {
-        this.inFlight.close();
-    }
-
-    public drain(timeoutMs: number): Promise<void> {
-        return this.inFlight.drain(timeoutMs);
     }
 
     private async handleCustomIdInteraction<TInteraction extends Interaction & { customId: string }>(

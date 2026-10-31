@@ -63,6 +63,7 @@
         "chalk": "catalog:deps"
     },
     "devDependencies": {
+        "@seedcord/brand": "workspace:^",
         "@seedcord/eslint-config": "workspace:^",
         "@seedcord/tsconfig": "workspace:^",
         "@seedcord/tsdown-config": "workspace:^",

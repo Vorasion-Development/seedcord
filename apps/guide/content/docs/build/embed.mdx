@@ -30,7 +30,7 @@ Your server imports the built bot, by its package name if you published it, or f
 
 `start()` loads your handlers and deploys your commands to Discord, the same as a bot on its own port. It deploys on every start, so a server that restarts often can hit Discord's limit on replacing commands. [When a deploy happens](/commands/deployed#when-a-deploy-happens) covers that.
 
-A request that arrives while `start()` runs waits for startup to finish. A request that reaches `fetch()` before you called `start()` gets an error:
+A request that arrives while `start()` runs waits until your commands finish deploying. A request that reaches `fetch()` before you called `start()` gets an error:
 
 ```txt output
 [1221] fetch() ran before start(). Call await seedcord.start() before your server passes requests to fetch().

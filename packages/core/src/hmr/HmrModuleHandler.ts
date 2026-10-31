@@ -42,7 +42,7 @@ export class HmrModuleHandler<THandler, TMiddleware = void, TArtifacts = unknown
     private readonly options: HmrModuleHandlerOptions<THandler, TMiddleware, TArtifacts>;
 
     constructor(options: HmrModuleHandlerOptions<THandler, TMiddleware, TArtifacts>) {
-        this.options = { ...options, logger: options.logger.inChannel('hmr') };
+        this.options = { ...options, logger: options.logger.withChannel('hmr') };
 
         // no import.meta.hot.data stash needed because a leaf reload never reconstructs the singleton
         // holding these Maps

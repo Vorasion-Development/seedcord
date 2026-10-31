@@ -1,6 +1,6 @@
 import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from 'next/constants';
 
-import type { SiteAddress } from './sites';
+import type { SiteAddress } from '@seedcord/brand';
 import type { NextConfig } from 'next';
 
 const PAGE_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js'];

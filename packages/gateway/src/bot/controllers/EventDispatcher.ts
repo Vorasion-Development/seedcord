@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- splitting this would split one event's path from load to dispatch across files */
 import { DispatchContext } from '@seedcord/core';
 import { HmrModuleHandler } from '@seedcord/core/hmr';
 import {
@@ -6,12 +5,12 @@ import {
     EventMiddlewareMetadataKey,
     eventResultFor,
     MiddlewareRegistry,
+    OnceTracker,
     PublishDefault,
     resultFor,
     runAfter,
     runHandlerGates
 } from '@seedcord/core/internal';
-import { InFlight } from '@seedcord/core/node/internal';
 import { SeedcordErrorCode, paint } from '@seedcord/errors';
 import { SeedcordError } from '@seedcord/errors/internal';
 import { Logger } from '@seedcord/logger';
@@ -34,6 +33,7 @@ import type {
 import type { Core } from '#interfaces/Core';
 import type { HandlerResult } from '@seedcord/core';
 import type { Initializeable, MiddlewareRegistrationOf } from '@seedcord/core/internal';
+import type { InFlight } from '@seedcord/core/node/internal';
 import type { EventFrequency, HmrAware, HmrUpdateEvent } from '@seedcord/types';
 import type { ClientEvents } from 'discord.js';
 
@@ -63,10 +63,8 @@ export class EventDispatcher implements Initializeable, HmrAware {
     private readonly middlewares = new MiddlewareRegistry<EventMiddlewareConstructor, keyof ClientEvents>(
         eventMiddleware
     );
-    private readonly executedOnceHandlers = new Set<EventHandlerConstructor>();
+    private readonly onceRuns = new OnceTracker();
     private readonly attachedEvents = new Set<keyof ClientEvents>();
-
-    private readonly inFlight = new InFlight(this.logger, 'Events');
 
     // a reload reports on the hmr channel
     private loading = false;
@@ -79,7 +77,10 @@ export class EventDispatcher implements Initializeable, HmrAware {
         EventArtifact[]
     >;
 
-    public constructor(protected core: Core) {
+    public constructor(
+        protected core: Core,
+        private readonly inFlight: InFlight
+    ) {
         const eventsDir = this.core.config.bot.events.path;
         if (!eventsDir) {
             // unreachable today, guards against a path regression
@@ -205,7 +206,6 @@ export class EventDispatcher implements Initializeable, HmrAware {
                 this.eventMap.delete(event as keyof ClientEvents);
             }
         }
-        // leaving executedOnceHandlers alone keeps a rollback-restored ctor spent
     }
 
     private unregisterMiddleware(middlewareCtor: EventMiddlewareConstructor): void {
@@ -315,22 +315,16 @@ export class EventDispatcher implements Initializeable, HmrAware {
         );
 
         this.core.bot.client.on(eventName, (...args: ClientEvents[typeof eventName]) => {
-            if (this.inFlight.closed) return;
-            const run = this.processEvent(eventName, args).catch((caught: unknown) => {
-                const error = asError(caught);
-                this.logger.error(`[${paint.coral.bold('UNHANDLED ERROR AT ROOT')}] ${error.name}`, error.stack);
-                this.core.bus[PublishDefault]('unhandledEventError', { error });
-            });
-            this.inFlight.track(run);
+            void this.inFlight.admit(() =>
+                this.processEvent(eventName, args).catch((caught: unknown) => this.reportUnhandled(caught))
+            );
         });
     }
 
-    public stopAccepting(): void {
-        this.inFlight.close();
-    }
-
-    public drain(timeoutMs: number): Promise<void> {
-        return this.inFlight.drain(timeoutMs);
+    private reportUnhandled(caught: unknown): void {
+        const error = asError(caught);
+        this.logger.error(`[${paint.coral.bold('UNHANDLED ERROR AT ROOT')}] ${error.name}`, error.stack);
+        this.core.bus[PublishDefault]('unhandledEventError', { error });
     }
 
     private async processEvent<KeyOfEvents extends keyof ClientEvents>(
@@ -341,9 +335,7 @@ export class EventDispatcher implements Initializeable, HmrAware {
         const handlerEntries = this.eventMap.get(eventName);
         if (!handlerEntries || handlerEntries.length === 0) return;
 
-        const handlersToExecute = handlerEntries.filter(
-            (entry) => entry.frequency !== 'once' || !this.executedOnceHandlers.has(entry.ctor)
-        );
+        const handlersToExecute = handlerEntries.filter((entry) => !this.onceRuns.isSpent(entry, eventName));
 
         if (handlersToExecute.length === 0) return;
 
@@ -358,16 +350,10 @@ export class EventDispatcher implements Initializeable, HmrAware {
             stopped = await this.runMiddlewares(eventName, args, dispatch, ran);
             if (stopped) return;
 
-            for (const entry of handlersToExecute) {
-                // marked spent before running so a rethrow can't invoke it again
-                if (entry.frequency === 'once') {
-                    // another dispatch may have marked this handler during the runMiddlewares await
-                    if (this.executedOnceHandlers.has(entry.ctor)) continue;
-                    this.executedOnceHandlers.add(entry.ctor);
-                }
-
-                handlers.push(await this.processHandler(eventName, entry.ctor, args, dispatch));
-            }
+            // another dispatch may have claimed a once handler during the runMiddlewares await
+            const claimed = handlersToExecute.filter((entry) => this.onceRuns.claim(entry, eventName));
+            const results = claimed.map((entry) => this.processHandler(eventName, entry.ctor, args, dispatch));
+            handlers.push(...(await Promise.all(results)));
         } finally {
             const result = eventResultFor(stopped, handlers);
             reportEventDispatched(this.core, dispatch.id, eventName, result, startedAt);
@@ -390,11 +376,16 @@ export class EventDispatcher implements Initializeable, HmrAware {
             await handler.execute();
             return { handler: Ctor.name, outcome: 'handled' };
         } catch (caught) {
-            handleEventFault(
-                caught,
-                { eventName: String(eventName), handlerName: Ctor.name, args, dispatch },
-                this.core
-            );
+            try {
+                handleEventFault(
+                    caught,
+                    { eventName: String(eventName), handlerName: Ctor.name, args, dispatch },
+                    this.core
+                );
+            } catch (reportFailed) {
+                // a Notice's render() is user code
+                this.reportUnhandled(reportFailed);
+            }
             return { handler: Ctor.name, ...resultFor(caught) };
         }
     }

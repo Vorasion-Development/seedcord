@@ -20,7 +20,7 @@ export interface BuiltSlot extends BotLayoutData {
 }
 
 // the CLI reads the source files off disk. dev runs the bot, every other command only imports it
-export interface SourceSlot extends BotLayoutData {
+interface SourceSlot extends BotLayoutData {
     kind: 'dev' | 'cli';
 }
 

@@ -107,11 +107,13 @@
     },
     "devDependencies": {
         "@seedcord/eslint-config": "workspace:^",
-        "@seedcord/rate-limiter": "workspace:^",
         "@seedcord/tsconfig": "workspace:^",
         "@seedcord/tsdown-config": "workspace:^",
         "@seedcord/vitest-config": "workspace:^",
         "envapt": "catalog:peer",
+        "keyv": "catalog:deps",
+        "unstorage": "catalog:deps",
+        "unstorage-v1": "npm:unstorage@1.17.6",
         "vite": "catalog:peer"
     },
     "publishConfig": {

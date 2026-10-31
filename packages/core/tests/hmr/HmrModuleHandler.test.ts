@@ -16,8 +16,8 @@ type LoggerSpy = Record<'debug' | 'info' | 'warn' | 'error', ReturnType<typeof v
 
 function fakeLogger(): { logger: Logger; spies: LoggerSpy } {
     const spies = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-    const logger = { ...spies, inChannel: (): unknown => logger };
-    // justified: the handler reads only these levels and inChannel
+    const logger = { ...spies, withChannel: (): unknown => logger };
+    // justified: the handler reads only these levels and withChannel
     return { logger: logger as unknown as Logger, spies };
 }
 

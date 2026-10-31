@@ -1,7 +1,7 @@
 {
     "$schema": "https://unpkg.com/knip@latest/schema.json",
     "ignoreBinaries": ["seedcord"],
-    "ignoreDependencies": ["fallow"],
+    "ignoreDependencies": ["ink"],
     "ignoreWorkspaces": ["mocks/*"],
     "rules": {
         "optionalPeerDependencies": "off"
@@ -34,16 +34,20 @@
                 "@seedcord/http",
                 "@discordjs/builders",
                 "@seedcord/core",
+                "@keyv/sqlite",
                 "@seedcord/plugin-kysely-postgres",
                 "@seedcord/plugin-mongoose",
                 "@types/pg",
+                "db0",
                 "discord-api-types",
                 "discord.js",
                 "envapt",
+                "keyv",
                 "kysely",
                 "mongoose",
                 "pg",
-                "seedcord"
+                "seedcord",
+                "unstorage"
             ]
         },
         "apps/home": {
@@ -69,6 +73,7 @@
             "ignoreDependencies": ["discord.js"]
         },
         "tooling/eslint-utils": {},
+        "tooling/brand": {},
         "tooling/cli-prompts": {},
         "tooling/cli-templates": {},
         "packages/event-emitter": {
@@ -90,7 +95,6 @@
             "entry": ["**/*.types-test.ts", "tests/fixtures/*.ts"],
             "ignoreDependencies": ["tsx"]
         },
-        "packages/rate-limiter": {},
         "packages/types": {
             "entry": ["**/*.types-test.ts"]
         },

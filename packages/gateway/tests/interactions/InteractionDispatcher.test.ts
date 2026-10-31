@@ -14,6 +14,7 @@ import { testConfig } from '#tests/utils/test-config';
 import { it as base } from '#tests/utils/test-env';
 
 import type { SubscriptionData } from '@seedcord/core';
+import type { InFlight } from '@seedcord/core/node/internal';
 
 interface PrivateInteractionDispatcher {
     maps: Record<InteractionKind, Map<string, unknown>>;
@@ -24,8 +25,7 @@ interface PrivateInteractionDispatcher {
     handleSlashCommand(interaction: unknown): Promise<void>;
     handleButton(interaction: unknown): Promise<void>;
     handleAutocomplete(interaction: unknown): Promise<void>;
-    stopAccepting(): void;
-    drain(timeoutMs: number): Promise<void>;
+    inFlight: InFlight;
     handleInteraction(interaction: unknown): Promise<void>;
 }
 
@@ -107,6 +107,7 @@ const it = base.extend<{ client: ClientHarness; bootWith: BootWith; dispatchedFo
 
         const onSpy = vi.spyOn(seedcord.bot.client, 'on');
         await controller.init();
+        controller.inFlight.open();
 
         const fire = onSpy.mock.calls.find(([event]) => event === 'interactionCreate')?.[1] as
             ((i: unknown) => void) | undefined;
@@ -195,6 +196,7 @@ describe('InteractionDispatcher Integration', () => {
         // capture the interactionCreate handler attachToClient registers on the client
         const onSpy = vi.spyOn(seedcord.bot.client, 'on');
         await controller.init();
+        controller.inFlight.open();
 
         seedcord.bus.on('anyInteraction', () => {
             throw new Error('observer boom');
@@ -994,12 +996,12 @@ describe('InteractionDispatcher Integration', () => {
             fire?.(fakeSlash('ping'));
             expect(handleSpy).toHaveBeenCalledTimes(1);
 
-            controller.stopAccepting();
+            controller.inFlight.close();
             fire?.(fakeSlash('ping'));
             // draining, so no new dispatch started
             expect(handleSpy).toHaveBeenCalledTimes(1);
 
-            await expect(controller.drain(50)).resolves.toBeUndefined();
+            await expect(controller.inFlight.drain(50)).resolves.toBeUndefined();
         });
 
         it('drain waits for an in-flight run that settles inside the budget', async ({ client }) => {
@@ -1016,9 +1018,9 @@ describe('InteractionDispatcher Integration', () => {
                     })
             );
             fire?.(fakeSlash('ping'));
-            controller.stopAccepting();
+            controller.inFlight.close();
 
-            await controller.drain(1000);
+            await controller.inFlight.drain(1000);
             expect(settled).toBe(true);
         });
 
@@ -1027,19 +1029,19 @@ describe('InteractionDispatcher Integration', () => {
 
             vi.spyOn(controller, 'handleInteraction').mockReturnValue(new Promise<void>(() => undefined));
             fire?.(fakeSlash('ping'));
-            controller.stopAccepting();
+            controller.inFlight.close();
 
-            await expect(controller.drain(30)).resolves.toBeUndefined();
+            await expect(controller.inFlight.drain(30)).resolves.toBeUndefined();
         });
 
         it('clears the drain timer when the in-flight set settles first', async ({ client }) => {
             const { controller, fire } = client;
             vi.spyOn(controller, 'handleInteraction').mockResolvedValue(undefined);
             fire?.(fakeSlash('ping'));
-            controller.stopAccepting();
+            controller.inFlight.close();
 
             vi.useFakeTimers();
-            await controller.drain(5000);
+            await controller.inFlight.drain(5000);
             expect(vi.getTimerCount()).toBe(0);
             vi.useRealTimers();
         });

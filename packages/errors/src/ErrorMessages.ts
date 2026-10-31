@@ -1,3 +1,6 @@
+/* eslint-disable max-lines -- the satisfies check below covers every code only while all messages are in one map */
+import { PRODUCTION_SITES } from '@seedcord/brand';
+
 import { SeedcordErrorCode } from './ErrorCodes';
 import { deployFix, listedFolderProblems, placeText, token, vitePluginFix } from './messageParts';
 import { allOf, counted, isOne, oneOf, quoted, reasonThen, sentence } from './messageText';
@@ -82,6 +85,12 @@ const messages = {
         `${paint.bold('readFiles')} was called on ${paint.path(dir)}, which is outside every folder in ${paint.bold('files')} in seedcord.config.ts. ${paint.bold('seedcord build')} bundles non-code files from only those folders. Add it to ${paint.bold('files')}, like ${paint.sky("files: ['./locales']")}.`,
     [SeedcordErrorCode.CoreDirectorySkipped]: (dir: string) =>
         `${paint.path(dir)} is in a folder ${paint.bold('seedcord build')} skips, so a built bot holds none of its files. The build skips dot-folders, node_modules, outDir, the logs folder beside seedcord.config.ts and project files like package.json. Move the files to a folder outside those.`,
+    [SeedcordErrorCode.CoreKvKeysUnsupported]: () =>
+        `${paint.bold('collection.entries()')} reads the key list of the Keyv store in ${paint.bold('config.kv')}, but that store can't list its keys. Cache adapters like ${paint.bold('@keyv/memcache')} never can. Pass an adapter that can, like ${paint.bold('@keyv/redis')} or ${paint.bold('@keyv/sqlite')}.`,
+    [SeedcordErrorCode.CoreKvDriverFailed]: (operation: 'read' | 'write' | 'delete' | 'list', key: string) =>
+        `The driver in ${paint.bold('config.kv')} failed to ${operation} ${paint.sky(key)}. Check that the storage it connects to is reachable.`,
+    [SeedcordErrorCode.CorePluginKvOutsideAttach]: (plugin: string) =>
+        `${paint.bold(plugin)} read ${paint.bold('this.kv')} on an instance that ${paint.bold('attach()')} didn't build. ${paint.bold('this.kv')} stores a plugin's records under its attach key, which only ${paint.bold('attach()')} gives it. Attach the class with ${paint.bold(`seedcord.attach('key', ${plugin})`)}.`,
     [SeedcordErrorCode.CorePluginGroupTaken]: (head: string, key: string) =>
         `${paint.bold(head)} is already taken on this bot, so ${paint.sky(key)} cannot nest under it. Pick another group name.`,
     [SeedcordErrorCode.CorePluginKeyMalformed]: (key: string, reason: string) =>
@@ -376,7 +385,7 @@ const messages = {
     [SeedcordErrorCode.MakeNeedsTerminal]: () =>
         `${paint.bold('seedcord make')} asks for a template, a name and each value in a terminal. Run it from a terminal with ${paint.bold('CI')} unset.`,
     [SeedcordErrorCode.MakeNoTemplates]: (folder: string) =>
-        `Found no templates in ${paint.path(folder)} or in the installed plugins. Each folder inside ${paint.path(folder)} is one template. ${paint.sky('https://seedcord.org/guide/tooling/make')} shows how to write one and where to copy the starters from.`,
+        `Found no templates in ${paint.path(folder)} or in the installed plugins. Each folder inside ${paint.path(folder)} is one template. ${paint.sky(PRODUCTION_SITES.guide.at('tooling/make'))} shows how to write one and where to copy the starters from.`,
     [SeedcordErrorCode.MakePathTaken]: (path: string, takenByTemplate?: string) =>
         takenByTemplate === undefined
             ? `${paint.path(path)} already exists. Pick another name, or delete that file first.`

@@ -1,9 +1,10 @@
+import { PRODUCTION_SITES } from '@seedcord/brand';
 import { cn } from '@seedcord/ui';
 import { Materwelon } from '@seedcord/ui/Materwelon';
 
 import { HeroStart } from '#components/home/HeroStart';
 import { PosterButton } from '#components/ui/PosterButton';
-import { DOCS_URL, GUIDE_URL } from '#lib/site';
+import { GUIDE_URL } from '#lib/site';
 
 import type { ReactNode } from 'react';
 
@@ -51,7 +52,7 @@ export function Hero(): ReactNode {
                             Get started
                         </PosterButton>
                         <PosterButton
-                            href={DOCS_URL}
+                            href={PRODUCTION_SITES.docs.url}
                             variant="outline"
                             className={cn('font-display px-4 py-2.5 text-base sm:px-7 sm:py-3 sm:text-lg')}
                         >

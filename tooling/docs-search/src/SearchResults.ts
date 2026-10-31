@@ -1,4 +1,4 @@
-import { DOCS } from '@seedcord/ui/sites';
+import { PRODUCTION_SITES } from '@seedcord/brand';
 
 import { DocSearch } from '#src/DocSearch';
 
@@ -34,7 +34,7 @@ export class SearchResults {
             if (seen.has(key)) continue;
             seen.add(key);
 
-            results.push({ ...entry, url: DOCS.at(entry.action.href) });
+            results.push({ ...entry, url: PRODUCTION_SITES.docs.at(entry.action.href) });
             if (results.length >= limit) break;
         }
         return results;

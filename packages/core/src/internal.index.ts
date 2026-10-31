@@ -21,7 +21,7 @@ export type { PluginArgs, PluginCtor } from '#src/plugin/Plugin';
 export type { Runtime, Transport } from '#src/plugin/options';
 export { attachmentsOf, sealAttachments } from '#src/plugin/PluginHost';
 export { splitPluginKey } from '#src/plugin/splitPluginKey';
-export { CoordinatedStartup } from '#src/lifecycle/CoordinatedStartup';
+export { CoordinatedStartup, type StartupTasks } from '#src/lifecycle/CoordinatedStartup';
 export { PluginLifecycle } from '#src/lifecycle/PluginLifecycle';
 
 export type { CommandMeta } from '#decorators/Command';
@@ -140,6 +140,7 @@ export {
 } from '#subscribers/slots';
 export { outcomeFor, queuedMsFor, reportDispatch } from '#src/dispatch/dispatchReport';
 export { eventResultFor, resultFor, runAfter } from '#src/dispatch/runAfter';
+export { OnceTracker } from '#src/dispatch/OnceTracker';
 // each transport declaration-merges its own default keys into this
 export type { DefaultSubscriptions } from '#subscribers/types/Subscriptions';
 export type { Initializeable } from '#src/plugin/Plugin';
