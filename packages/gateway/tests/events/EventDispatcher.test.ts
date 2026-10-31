@@ -8,14 +8,14 @@ import { testConfig } from '#tests/utils/test-config';
 import { it } from '#tests/utils/test-env';
 
 import type { SubscriptionData } from '@seedcord/core';
+import type { InFlight } from '@seedcord/core/node/internal';
 
 interface PrivateEventDispatcher {
     eventMap: Map<string, unknown[]>;
     init(): Promise<void>;
     onHmr(event: unknown): Promise<void>;
     processEvent(eventName: string, args: unknown[]): Promise<void>;
-    stopAccepting(): void;
-    drain(timeoutMs: number): Promise<void>;
+    inFlight: InFlight;
 }
 
 // justified: eventMap and processEvent are private on the dispatcher
@@ -79,6 +79,7 @@ describe('EventDispatcher Integration', () => {
 
         const onSpy = vi.spyOn(seedcord.bot.client, 'on');
         await events.init();
+        events.inFlight.open();
 
         seedcord.bus.on('eventDispatching', () => {
             throw new Error('observer boom');
@@ -114,6 +115,7 @@ describe('EventDispatcher Integration', () => {
 
         const onSpy = vi.spyOn(seedcord.bot.client, 'on');
         await events.init();
+        events.inFlight.open();
 
         const seen: SubscriptionData<'eventDispatching'>[] = [];
         seedcord.bus.on('eventDispatching', (payload) => seen.push(payload));
@@ -490,6 +492,7 @@ describe('EventDispatcher Integration', () => {
 
                 const onSpy = vi.spyOn(seedcord.bot.client, 'on');
                 await controller.init();
+                controller.inFlight.open();
 
                 const fire = onSpy.mock.calls.find(([event]) => event === 'messageCreate')?.[1] as
                     ((...args: unknown[]) => void) | undefined;
@@ -544,11 +547,11 @@ describe('EventDispatcher Integration', () => {
             fire?.({ reply: vi.fn() });
             expect(processSpy).toHaveBeenCalledTimes(1);
 
-            controller.stopAccepting();
+            controller.inFlight.close();
             fire?.({ reply: vi.fn() });
             expect(processSpy).toHaveBeenCalledTimes(1);
 
-            await expect(controller.drain(50)).resolves.toBeUndefined();
+            await expect(controller.inFlight.drain(50)).resolves.toBeUndefined();
         });
 
         withClient('drain waits for an in-flight event that settles inside the budget', async ({ client }) => {
@@ -565,9 +568,9 @@ describe('EventDispatcher Integration', () => {
                     })
             );
             fire?.({ reply: vi.fn() });
-            controller.stopAccepting();
+            controller.inFlight.close();
 
-            await controller.drain(1000);
+            await controller.inFlight.drain(1000);
             expect(settled).toBe(true);
         });
 
@@ -576,19 +579,19 @@ describe('EventDispatcher Integration', () => {
 
             vi.spyOn(controller, 'processEvent').mockReturnValue(new Promise<void>(() => undefined));
             fire?.({ reply: vi.fn() });
-            controller.stopAccepting();
+            controller.inFlight.close();
 
-            await expect(controller.drain(30)).resolves.toBeUndefined();
+            await expect(controller.inFlight.drain(30)).resolves.toBeUndefined();
         });
 
         withClient('clears the drain timer when the in-flight set settles first', async ({ client }) => {
             const { controller, fire } = client;
             vi.spyOn(controller, 'processEvent').mockResolvedValue(undefined);
             fire?.({ reply: vi.fn() });
-            controller.stopAccepting();
+            controller.inFlight.close();
 
             vi.useFakeTimers();
-            await controller.drain(5000);
+            await controller.inFlight.drain(5000);
             expect(vi.getTimerCount()).toBe(0);
             vi.useRealTimers();
         });

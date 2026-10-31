@@ -100,9 +100,7 @@ export class Seedcord extends ServerHost<'http'> implements SeedcordInstance {
      * Starts the host and runs the startup tasks.
      */
     public start(): Promise<this> {
-        const starting = this.init();
-        this.#endpoint.startWith(starting);
-        return starting;
+        return this.init();
     }
 
     /**
@@ -110,8 +108,8 @@ export class Seedcord extends ServerHost<'http'> implements SeedcordInstance {
      * config sets `port: false`.
      *
      * Rejects with `CoreFetchBeforeStart` until `start()` is called. A request that arrives while
-     * `start()` runs waits for all of startup, the command deploy included. Answers 503 once
-     * shutdown begins or `start()` fails.
+     * `start()` runs waits until the command deploy finishes. Answers 503 once shutdown begins or
+     * `start()` fails.
      *
      * @example
      * ```ts
@@ -154,6 +152,11 @@ export class Seedcord extends ServerHost<'http'> implements SeedcordInstance {
         // the Login tasks read the token authenticate sets
         tasks.addDiscordTasks();
 
+        this.startup.addTask(StartupPhase.Ready, 'open-endpoint', () => {
+            this.#endpoint.open();
+            return Promise.resolve();
+        });
+
         this.startup.addTask(StartupPhase.Ready, 'http-server', () => {
             const { port = DEFAULT_PORT } = this.config;
             return port === false ? Promise.resolve() : this.#listen(port);
@@ -185,7 +188,7 @@ export class Seedcord extends ServerHost<'http'> implements SeedcordInstance {
     async #listen(port: number): Promise<void> {
         const server = createServer((incoming, outgoing) => {
             void (async () => {
-                const response = await this.#endpoint.answer(await toWebRequest(incoming));
+                const response = await this.#endpoint.fetch(await toWebRequest(incoming));
                 // node's close() leaves a busy connection open once it goes idle
                 if (!server.listening) outgoing.setHeader('connection', 'close');
                 await writeWebResponse(response, outgoing);

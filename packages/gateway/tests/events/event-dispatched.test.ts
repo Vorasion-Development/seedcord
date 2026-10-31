@@ -7,10 +7,12 @@ import { testConfig } from '#tests/utils/test-config';
 import { it } from '#tests/utils/test-env';
 
 import type { SubscriptionData } from '@seedcord/core';
+import type { InFlight } from '@seedcord/core/node/internal';
 
 interface PrivateEventDispatcher {
     init(): Promise<void>;
     processEvent(eventName: string, args: unknown[]): Promise<void>;
+    inFlight: InFlight;
 }
 
 // justified: processEvent is private on the dispatcher
@@ -134,6 +136,7 @@ describe('eventDispatched', () => {
         const events = dispatcherOf(seedcord);
         const onSpy = vi.spyOn(seedcord.bot.client, 'on');
         await events.init();
+        events.inFlight.open();
 
         const starts: unknown[] = [];
         const ends: unknown[] = [];

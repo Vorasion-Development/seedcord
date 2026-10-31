@@ -82,7 +82,7 @@ export class UptimeCommand extends SlashHandler<'uptime'> {
 
 A handler can call every public member of your class. `startedAt` is private, so a handler reads the time through `elapsed()` and can't overwrite it. Keep connections and state private, and make public only the methods you want handlers to call.
 
-Handlers can call those methods only after startup. Startup runs in three phases: Configuration, Login and Ready. `init()` runs in Configuration by default, and a plugin can also define `ready()` for the Ready phase. Handlers start receiving interactions once every `init()` has finished, so a handler can call your method while `ready()` is still running. If a method reads something `ready()` sets, return early or throw while it's unset. [The lifecycle](/plugins/lifecycle) has the full order.
+Handlers can call those methods only after startup. Startup runs in three phases: Configuration, Login and Ready. `init()` runs in Configuration by default, and a plugin can also define `ready()` for the Ready phase. Handlers start receiving interactions when the Ready phase starts, so a handler can call your method while `ready()` is still running. If a method reads something `ready()` sets, return early or throw while it's unset. [The lifecycle](/plugins/lifecycle) has the full order.
 
 ## Closing what init() opened
 

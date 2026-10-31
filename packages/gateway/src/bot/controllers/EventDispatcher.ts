@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- splitting this would split one event's path from load to dispatch across files */
 import { DispatchContext } from '@seedcord/core';
 import { HmrModuleHandler } from '@seedcord/core/hmr';
 import {
@@ -11,7 +10,6 @@ import {
     runAfter,
     runHandlerGates
 } from '@seedcord/core/internal';
-import { InFlight } from '@seedcord/core/node/internal';
 import { SeedcordErrorCode, paint } from '@seedcord/errors';
 import { SeedcordError } from '@seedcord/errors/internal';
 import { Logger } from '@seedcord/logger';
@@ -34,6 +32,7 @@ import type {
 import type { Core } from '#interfaces/Core';
 import type { HandlerResult } from '@seedcord/core';
 import type { Initializeable, MiddlewareRegistrationOf } from '@seedcord/core/internal';
+import type { InFlight } from '@seedcord/core/node/internal';
 import type { EventFrequency, HmrAware, HmrUpdateEvent } from '@seedcord/types';
 import type { ClientEvents } from 'discord.js';
 
@@ -66,8 +65,6 @@ export class EventDispatcher implements Initializeable, HmrAware {
     private readonly executedOnceHandlers = new Set<EventHandlerConstructor>();
     private readonly attachedEvents = new Set<keyof ClientEvents>();
 
-    private readonly inFlight = new InFlight(this.logger, 'Events');
-
     // a reload reports on the hmr channel
     private loading = false;
     private readonly loadedHandlers: { name: string; from: string }[] = [];
@@ -79,7 +76,10 @@ export class EventDispatcher implements Initializeable, HmrAware {
         EventArtifact[]
     >;
 
-    public constructor(protected core: Core) {
+    public constructor(
+        protected core: Core,
+        private readonly inFlight: InFlight
+    ) {
         const eventsDir = this.core.config.bot.events.path;
         if (!eventsDir) {
             // unreachable today, guards against a path regression
@@ -315,22 +315,14 @@ export class EventDispatcher implements Initializeable, HmrAware {
         );
 
         this.core.bot.client.on(eventName, (...args: ClientEvents[typeof eventName]) => {
-            if (this.inFlight.closed) return;
-            const run = this.processEvent(eventName, args).catch((caught: unknown) => {
-                const error = asError(caught);
-                this.logger.error(`[${paint.coral.bold('UNHANDLED ERROR AT ROOT')}] ${error.name}`, error.stack);
-                this.core.bus[PublishDefault]('unhandledEventError', { error });
-            });
-            this.inFlight.track(run);
+            void this.inFlight.admit(() =>
+                this.processEvent(eventName, args).catch((caught: unknown) => {
+                    const error = asError(caught);
+                    this.logger.error(`[${paint.coral.bold('UNHANDLED ERROR AT ROOT')}] ${error.name}`, error.stack);
+                    this.core.bus[PublishDefault]('unhandledEventError', { error });
+                })
+            );
         });
-    }
-
-    public stopAccepting(): void {
-        this.inFlight.close();
-    }
-
-    public drain(timeoutMs: number): Promise<void> {
-        return this.inFlight.drain(timeoutMs);
     }
 
     private async processEvent<KeyOfEvents extends keyof ClientEvents>(

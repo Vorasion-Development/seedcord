@@ -46,8 +46,8 @@ Startup runs three phases in order.
 | startup phase | what has happened | plugins |
 | --- | --- | --- |
 | `Configuration` | nothing connected | `init()` runs here by default |
-| `Login` | the gateway session opens, and http runs its REST-only startup work | |
-| `Ready` | handlers are live and interactions dispatch | `ready()` always runs here |
+| `Login` | the gateway session opens, and seedcord loads your emojis and deploys your commands | |
+| `Ready` | your handlers start running | `ready()` always runs here |
 
 {/* prettier-ignore-end */}
 
@@ -89,9 +89,9 @@ shutdown
 └─ Release
 ```
 
-Your plugins start in the order you attach them and stop in the _reverse_ order. Attach a plugin before any plugin that reads from it. seedcord puts all of a phase's plugin calls in one task, so they run one after another while the phase's [other tasks](/core#running-work-while-your-bot-starts-and-stops) run in parallel with them. Your handlers can already receive interactions and events while `ready()` is still running. Set up anything a handler needs in `init()`, and leave it in the default Configuration phase.
+Your plugins start in the order you attach them and stop in the _reverse_ order. Attach a plugin before any plugin that reads from it. seedcord puts all of a phase's plugin calls in one task, so they run one after another while the phase's [other tasks](/core#running-work-while-your-bot-starts-and-stops) run in parallel with them. Your handlers start when Ready does, so they can already receive interactions and events while `ready()` is still running. Set up anything a handler needs in `init()`, and keep it in Configuration or Login.
 
-On a gateway bot, the Login phase loads your handlers and logs in, and tasks within a phase run in parallel. An `init()` moved to Login can still be running when a handler receives its first event.
+A gateway bot gets events from Discord as soon as it logs in. Anything that arrives during Login waits until Ready starts, so its handler can read your emojis and command mentions.
 
 ## Moving a method to another phase
 
