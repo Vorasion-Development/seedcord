@@ -1,6 +1,7 @@
 /* eslint-disable max-lines -- the satisfies check below covers every code only while all messages are in one map */
+import { PRODUCTION_SITES } from '@seedcord/brand';
+
 import { SeedcordErrorCode } from './ErrorCodes';
-import { GUIDE_URL } from './guideUrl';
 import { deployFix, listedFolderProblems, placeText, token, vitePluginFix } from './messageParts';
 import { allOf, counted, isOne, oneOf, quoted, reasonThen, sentence } from './messageText';
 import { paint } from './palette';
@@ -384,7 +385,7 @@ const messages = {
     [SeedcordErrorCode.MakeNeedsTerminal]: () =>
         `${paint.bold('seedcord make')} asks for a template, a name and each value in a terminal. Run it from a terminal with ${paint.bold('CI')} unset.`,
     [SeedcordErrorCode.MakeNoTemplates]: (folder: string) =>
-        `Found no templates in ${paint.path(folder)} or in the installed plugins. Each folder inside ${paint.path(folder)} is one template. ${paint.sky(`${GUIDE_URL}/tooling/make`)} shows how to write one and where to copy the starters from.`,
+        `Found no templates in ${paint.path(folder)} or in the installed plugins. Each folder inside ${paint.path(folder)} is one template. ${paint.sky(PRODUCTION_SITES.guide.at('tooling/make'))} shows how to write one and where to copy the starters from.`,
     [SeedcordErrorCode.MakePathTaken]: (path: string, takenByTemplate?: string) =>
         takenByTemplate === undefined
             ? `${paint.path(path)} already exists. Pick another name, or delete that file first.`

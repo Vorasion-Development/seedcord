@@ -1,5 +1,6 @@
+import { PRODUCTION_SITES } from '@seedcord/brand';
 import { SeedcordErrorCode, paint } from '@seedcord/errors';
-import { GUIDE_URL, SeedcordError } from '@seedcord/errors/internal';
+import { SeedcordError } from '@seedcord/errors/internal';
 
 import { findCloudflared, installHint, systemLookup } from './cloudflared';
 import { CloudflaredTunnel, systemTunnelDeps } from './CloudflaredTunnel';
@@ -14,7 +15,7 @@ import type { ILogger } from '@seedcord/types';
 
 const PASTE_HINT = 'The tunnel is still up, so try pasting that URL into the dashboard.';
 const RESTART_HINT = 'Restart for a fresh hostname, or set `tunnel` to an https URL you already serve.';
-const NO_PORT_HINT = `No tunnel, since the bot runs with ${paint.bold('port: false')} and cloudflared has no port to forward to. Give the bot a port while you develop, or set ${paint.amber('tunnel')} to the url of the server that serves it: ${paint.sky(`${GUIDE_URL}/build/embed`)}`;
+const NO_PORT_HINT = `No tunnel, since the bot runs with ${paint.bold('port: false')} and cloudflared has no port to forward to. Give the bot a port while you develop, or set ${paint.amber('tunnel')} to the url of the server that serves it: ${paint.sky(PRODUCTION_SITES.guide.at('build/embed'))}`;
 
 export function missingCloudflaredHint(platform: NodeJS.Platform): string {
     const arrow = paint.mute('→');

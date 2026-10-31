@@ -1,4 +1,5 @@
-import { DISCORD_URL, DOCS, GUIDE, HOME_URL, isSitePath, PRODUCTION_ORIGIN } from '@seedcord/ui/sites';
+import { PRODUCTION_ORIGIN } from '@seedcord/brand';
+import { DISCORD_URL, DOCS, GUIDE, HOME_URL, isSitePath } from '@seedcord/ui/sites';
 
 const SAME_SITE = new Set([PRODUCTION_ORIGIN, new URL(HOME_URL).origin]);
 const OTHER_APPS = [GUIDE.path, DOCS.path];

@@ -1,7 +1,7 @@
 {
     "$schema": "https://unpkg.com/knip@latest/schema.json",
     "ignoreBinaries": ["seedcord"],
-    "ignoreDependencies": ["fallow"],
+    "ignoreDependencies": ["ink"],
     "ignoreWorkspaces": ["mocks/*"],
     "rules": {
         "optionalPeerDependencies": "off"
@@ -73,6 +73,7 @@
             "ignoreDependencies": ["discord.js"]
         },
         "tooling/eslint-utils": {},
+        "tooling/brand": {},
         "tooling/cli-prompts": {},
         "tooling/cli-templates": {},
         "packages/event-emitter": {

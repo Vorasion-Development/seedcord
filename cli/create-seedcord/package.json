@@ -54,6 +54,7 @@
         "coverage": "vitest run --coverage"
     },
     "devDependencies": {
+        "@seedcord/brand": "workspace:^",
         "@seedcord/cli-prompts": "workspace:^",
         "@seedcord/cli-templates": "workspace:^",
         "@seedcord/core": "workspace:^",

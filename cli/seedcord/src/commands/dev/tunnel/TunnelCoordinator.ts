@@ -6,12 +6,12 @@ import type { InteractionsEndpoint } from './InteractionsEndpoint';
 import type { ILogger } from '@seedcord/types';
 import type { SeedcordInstance } from '@seedcord/types/internal';
 
-export interface CoordinatorTunnel {
+interface CoordinatorTunnel {
     open(signal: AbortSignal, onResolving?: () => void): Promise<string>;
     stop(): void;
 }
 
-export type TunnelSetup =
+type TunnelSetup =
     | {
           readonly opening: string;
           readonly makeTunnel: (onLost: () => void) => CoordinatorTunnel;
