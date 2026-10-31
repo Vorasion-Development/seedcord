@@ -13,7 +13,6 @@ import { workerEntry } from '#commands/build/builder/workerEntry';
 import { listenHostFor } from '#commands/dev/tunnel/listenHost';
 import { rethrowVitePluginError } from '#core/config/vitePlugins';
 import { BOT_ENVIRONMENT, botEnvironment } from '#core/modules/botEnvironment';
-import { reportWorkerExports } from '#core/modules/cloudflarePlugin';
 import { openModuleLoader } from '#core/modules/openModuleLoader';
 import { openViteServer } from '#core/modules/openViteServer';
 import { mergeViteConfig } from '#core/modules/userCodeConfig';
@@ -136,7 +135,6 @@ export class EdgeDevRuntime extends BaseDevRuntime<EdgeStarted> {
         const { instance } = context.config;
         this.emit(context, { type: 'progress', status: `Importing ${displayPath(instance)}…` });
         const names = await functionExportsOf(modules, instance);
-        reportWorkerExports(names);
         this.emit(context, { type: 'progress', status: 'Starting workerd…' });
         return names;
     }
